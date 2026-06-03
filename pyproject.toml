@@ -3,7 +3,7 @@ name = "ai-glasses-memory"
 version = "0.1.0"
 description = "AI 眼镜实时视觉记忆助手"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
@@ -24,4 +24,3 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-

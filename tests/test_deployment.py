@@ -18,6 +18,13 @@ def test_requirements_installs_local_package():
     assert "-e ." in requirements.read_text(encoding="utf-8").splitlines()
 
 
+def test_python_runtime_preference_is_documented():
+    runtime = PROJECT_ROOT / "runtime.txt"
+
+    assert runtime.exists()
+    assert runtime.read_text(encoding="utf-8").strip() == "python-3.11"
+
+
 def test_render_blueprint_uses_streamlit_port_from_environment():
     render_yaml = PROJECT_ROOT / "render.yaml"
 

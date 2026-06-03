@@ -7,6 +7,7 @@
 - Streamlit 入口：`app.py`
 - 本地 UI 源码：`src/ai_glasses_memory/ui/streamlit_app.py`
 - 依赖文件：`requirements.txt`
+- Python 版本偏好：`runtime.txt` 写明 Python 3.11，但 Streamlit Community Cloud 需要在 Advanced settings 里手动选择 Python 版本
 - Render Blueprint：`render.yaml`
 
 ## 方案 A：Streamlit Community Cloud
@@ -22,9 +23,12 @@
 app.py
 ```
 
-5. 部署完成后打开页面，输入问题并提交，确认时间线出现新记录。
+5. 打开 Advanced settings，把 Python version 选为 `3.11`。
+6. 部署完成后打开页面，输入问题并提交，确认时间线出现新记录。
 
 说明：Streamlit Cloud 的免费环境适合演示，不适合长期保存 SQLite 数据。应用重启后，`data/memory.sqlite3` 里的线上数据可能丢失。
+
+如果页面出现 `ModuleNotFoundError`，先确认 GitHub 仓库已经包含 `app.py`、`requirements.txt`、`runtime.txt`、`pyproject.toml` 和完整的 `src/ai_glasses_memory/models/` 目录。然后在 Streamlit Cloud 里删除当前 app，重新部署，并在 Advanced settings 中选择 Python `3.11`。仅修改 `runtime.txt` 不足以改变 Community Cloud 的 Python 版本。
 
 ## 方案 B：Render Web Service
 
