@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ai-glasses-memory-mvp
+    runtime: python
+    plan: free
+    buildCommand: "python -m pip install --upgrade pip && python -m pip install -r requirements.txt"
+    startCommand: "streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true"
+    envVars:
+      - key: AI_GLASSES_DB_PATH
+        value: data/memory.sqlite3
+      - key: PYTHON_VERSION
+        value: 3.11.9
