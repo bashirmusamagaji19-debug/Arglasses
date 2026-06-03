@@ -1,4 +1,5 @@
 .superpowers/
+.reasonix/
 __pycache__/
 .pytest_cache/
 .venv/

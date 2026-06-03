@@ -76,6 +76,19 @@ Main file path: app.py
 
 Render 也可直接使用 `render.yaml`。详细步骤见 [docs/deployment.md](docs/deployment.md)。
 
+## 在线 Demo
+
+👉 **[点此打开在线 Demo]()** ← *部署后填入 Streamlit Cloud 或 Render 的实际 URL*
+
+Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可体验视觉记忆闭环。
+
+| 功能 | 说明 |
+|------|------|
+| 图片上传 + 提问 | 上传一张图片，输入问题（如"我刚才看到了什么？"） |
+| 模拟回答与场景摘要 | 系统生成模拟 OCR 文本、VLM 回答和场景摘要 |
+| 记忆时间线 | 自动保存每次交互记录，按时间倒序展示 |
+| 历史检索 | 通过关键词搜索历史记忆事件 |
+
 ## API
 
 启动 FastAPI 后可使用：
