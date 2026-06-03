@@ -35,3 +35,12 @@ def test_render_blueprint_uses_streamlit_port_from_environment():
     assert "streamlit run app.py" in contents
     assert "--server.address 0.0.0.0" in contents
     assert "--server.port $PORT" in contents
+
+
+def test_streamlit_ui_exposes_camera_and_upload_inputs():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "st.camera_input" in contents
+    assert "st.file_uploader" in contents
+    assert "save_input_image(selected_image)" in contents
