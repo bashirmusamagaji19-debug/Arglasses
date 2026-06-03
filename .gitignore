@@ -13,5 +13,6 @@ venv/
 *.db
 *.egg-info/
 data/
-models/
+/models/
+build/
 outputs/
