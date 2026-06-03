@@ -6,9 +6,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def test_streamlit_deployment_entrypoint_exists():
     entrypoint = PROJECT_ROOT / "app.py"
+    contents = entrypoint.read_text(encoding="utf-8")
 
     assert entrypoint.exists()
-    assert "ai_glasses_memory.ui.streamlit_app" in entrypoint.read_text(encoding="utf-8")
+    assert "streamlit_app.py" in contents
+    assert "runpy.run_path" in contents
 
 
 def test_requirements_installs_local_package():
