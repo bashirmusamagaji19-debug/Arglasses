@@ -15,6 +15,7 @@ class Settings:
     vlm_model: str = ""
     vlm_max_tokens: int = 512
     vlm_timeout_seconds: float = 30
+    vlm_max_image_width: int = 1024
 
 
 def get_settings() -> Settings:
@@ -27,4 +28,5 @@ def get_settings() -> Settings:
         vlm_model=os.getenv("AI_GLASSES_VLM_MODEL", ""),
         vlm_max_tokens=int(os.getenv("AI_GLASSES_VLM_MAX_TOKENS", "512")),
         vlm_timeout_seconds=float(os.getenv("AI_GLASSES_VLM_TIMEOUT_SECONDS", "30")),
+        vlm_max_image_width=int(os.getenv("AI_GLASSES_VLM_MAX_IMAGE_WIDTH", "1024")),
     )

@@ -35,6 +35,8 @@ class OpenAICompatibleVLMProvider:
         http_client=None,
         max_tokens: int = 512,
         timeout_seconds: float = 30,
+        max_image_width: int = 1024,
+        image_detail: str = "low",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -43,6 +45,8 @@ class OpenAICompatibleVLMProvider:
         self.http_client = http_client or httpx.Client()
         self.max_tokens = max_tokens
         self.timeout_seconds = timeout_seconds
+        self.max_image_width = max_image_width
+        self.image_detail = image_detail
 
     def answer_question(self, question: str, ocr_text: str, image_path: str | None) -> str:
         try:
@@ -88,7 +92,7 @@ class OpenAICompatibleVLMProvider:
             user_content.append(
                 {
                     "type": "image_url",
-                    "image_url": {"url": image_data_url},
+                    "image_url": {"url": image_data_url, "detail": self.image_detail},
                 }
             )
 
@@ -104,8 +108,7 @@ class OpenAICompatibleVLMProvider:
             "max_tokens": self.max_tokens,
         }
 
-    @staticmethod
-    def _image_to_data_url(image_path: str | None) -> str | None:
+    def _image_to_data_url(self, image_path: str | None) -> str | None:
         if not image_path:
             return None
 
@@ -113,9 +116,37 @@ class OpenAICompatibleVLMProvider:
         if not path.exists() or not path.is_file():
             return None
 
-        mime_type = mimetypes.guess_type(path.name)[0] or "image/jpeg"
-        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+        try:
+            image_bytes = self._compressed_image_bytes(path)
+            mime_type = "image/jpeg"
+        except Exception as exc:
+            logger.warning("VLM image compression failed, using original image: path=%s error=%s", path, exc)
+            image_bytes = path.read_bytes()
+            mime_type = mimetypes.guess_type(path.name)[0] or "image/jpeg"
+
+        logger.info(
+            "VLM image payload prepared: path=%s bytes=%s max_image_width=%s detail=%s",
+            path,
+            len(image_bytes),
+            self.max_image_width,
+            self.image_detail,
+        )
+        encoded = base64.b64encode(image_bytes).decode("ascii")
         return f"data:{mime_type};base64,{encoded}"
+
+    def _compressed_image_bytes(self, path: Path) -> bytes:
+        from io import BytesIO
+
+        from PIL import Image
+
+        with Image.open(path) as image:
+            image = image.convert("RGB")
+            if image.width > self.max_image_width:
+                ratio = self.max_image_width / image.width
+                image = image.resize((self.max_image_width, max(1, int(image.height * ratio))))
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG", quality=85, optimize=True)
+            return buffer.getvalue()
 
 
 def create_vlm_provider(
@@ -125,6 +156,7 @@ def create_vlm_provider(
     model: str | None = None,
     max_tokens: int = 512,
     timeout_seconds: float = 30,
+    max_image_width: int = 1024,
 ) -> VLMProvider:
     normalized = (provider_name or "mock").strip().lower()
     if normalized in {"openai_compatible", "openai-compatible"}:
@@ -135,5 +167,6 @@ def create_vlm_provider(
                 model=model,
                 max_tokens=max_tokens,
                 timeout_seconds=timeout_seconds,
+                max_image_width=max_image_width,
             )
     return MockVLMProvider()

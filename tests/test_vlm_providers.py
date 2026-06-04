@@ -83,7 +83,28 @@ def test_openai_compatible_provider_sends_text_and_image_payload(tmp_path):
     assert user_content[0]["type"] == "text"
     assert "OCR text" in user_content[0]["text"]
     assert user_content[1]["type"] == "image_url"
-    assert user_content[1]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert user_content[1]["image_url"]["url"].startswith("data:image/")
+    assert user_content[1]["image_url"]["detail"] == "low"
+
+
+def test_openai_compatible_provider_compresses_large_image_payload(tmp_path):
+    from PIL import Image
+
+    image_path = tmp_path / "large.png"
+    Image.new("RGB", (2000, 1000), color=(240, 240, 240)).save(image_path)
+
+    provider = OpenAICompatibleVLMProvider(
+        base_url="https://example.com/v1/",
+        api_key="secret",
+        model="qwen-vl",
+        max_image_width=512,
+    )
+
+    data_url = provider._image_to_data_url(str(image_path))
+
+    assert data_url is not None
+    assert data_url.startswith("data:image/jpeg;base64,")
+    assert len(data_url) < image_path.stat().st_size
 
 
 def test_openai_compatible_provider_falls_back_on_http_error():

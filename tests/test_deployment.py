@@ -81,3 +81,4 @@ def test_env_example_documents_vlm_provider_settings():
     assert "AI_GLASSES_VLM_API_KEY=" in contents
     assert "AI_GLASSES_VLM_MODEL=" in contents
     assert "AI_GLASSES_VLM_MAX_TOKENS=512" in contents
+    assert "AI_GLASSES_VLM_MAX_IMAGE_WIDTH=1024" in contents

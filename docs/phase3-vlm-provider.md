@@ -62,6 +62,8 @@ $env:AI_GLASSES_VLM_TIMEOUT_SECONDS="30"
 - 没有完整配置 `base_url`、`api_key`、`model` 时自动使用 mock。
 - 真实 VLM 请求失败时回退 mock，避免 demo 崩溃。
 - 通过 `AI_GLASSES_VLM_MAX_TOKENS` 限制输出长度。
+- 通过 `AI_GLASSES_VLM_MAX_IMAGE_WIDTH` 限制图片宽度，默认 `1024`。
+- 请求前将图片压缩为 JPEG，并使用 `detail: low` 降低视觉处理成本。
 - UI 顶部显示当前 VLM 模式，并在真实 VLM 模式下提示调用成本。
 
 后续如果做自动抽帧，需要再增加：

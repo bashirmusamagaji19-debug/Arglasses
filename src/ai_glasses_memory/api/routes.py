@@ -32,6 +32,7 @@ def get_pipeline() -> MemoryPipeline:
             model=settings.vlm_model,
             max_tokens=settings.vlm_max_tokens,
             timeout_seconds=settings.vlm_timeout_seconds,
+            max_image_width=settings.vlm_max_image_width,
         ),
     )
 
