@@ -11,6 +11,11 @@ class UploadedImage(Protocol):
         ...
 
 
+class FastAPIUploadFile(Protocol):
+    filename: str | None
+    file: object
+
+
 def save_input_image(
     uploaded_file: UploadedImage | None,
     upload_dir: str | Path = "data/uploads",
@@ -21,7 +26,13 @@ def save_input_image(
     target_dir = Path(upload_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = Path(uploaded_file.name).name or "camera_capture.jpg"
+    filename = Path(getattr(uploaded_file, "name", None) or getattr(uploaded_file, "filename", "")).name
+    filename = filename or "camera_capture.jpg"
     target = target_dir / filename
-    target.write_bytes(uploaded_file.getbuffer())
+    if hasattr(uploaded_file, "getbuffer"):
+        target.write_bytes(uploaded_file.getbuffer())
+    else:
+        file_obj = getattr(uploaded_file, "file")
+        file_obj.seek(0)
+        target.write_bytes(file_obj.read())
     return str(target)

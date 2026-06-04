@@ -97,6 +97,8 @@ Render 也可直接使用 `render.yaml`。详细步骤见 [docs/deployment.md](d
 
 如果手机摄像头权限不可用，可以使用备用的图片上传入口。
 
+也可以使用独立手机输入页。启动 FastAPI 后，手机打开 `http://电脑局域网IP:8000/mobile`，用原生浏览器拍照上传。详细说明见 [docs/mobile-input.md](docs/mobile-input.md)。
+
 ## PaddleOCR
 
 阶段 3.1 已加入 PaddleOCR provider 开关。默认仍使用 mock OCR；本地安装 OCR 可选依赖后，可以切换到真实 OCR：
