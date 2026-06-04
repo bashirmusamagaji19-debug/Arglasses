@@ -35,6 +35,14 @@
 
 ## 本地运行
 
+复制本地环境变量模板：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+然后编辑 `.env`。本地启动时项目会自动读取 `.env`，但 `.env` 已被 `.gitignore` 忽略，不要提交 API key。
+
 安装依赖：
 
 ```powershell
@@ -150,6 +158,8 @@ docs/                                 # 架构、部署和学习文档
 - 向量检索：Chroma 或 FAISS。
 - 语音输入：faster-whisper ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
+
+当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。
 
 暂不打断主路线的优化项记录在 [docs/optimization-backlog.md](docs/optimization-backlog.md)，包括 OCR 识别速度优化，以及外文 OCR 结果翻译成中文。
 

@@ -1,0 +1,68 @@
+from pathlib import Path
+
+from ai_glasses_memory.config import get_settings, load_dotenv
+
+
+def test_load_dotenv_sets_missing_environment_values(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "AI_GLASSES_OCR_PROVIDER=paddleocr",
+                "AI_GLASSES_VLM_PROVIDER=openai_compatible",
+                "AI_GLASSES_VLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "AI_GLASSES_VLM_MODEL=qwen3-vl-plus",
+                "AI_GLASSES_VLM_MAX_IMAGE_WIDTH=768",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    for name in [
+        "AI_GLASSES_OCR_PROVIDER",
+        "AI_GLASSES_VLM_PROVIDER",
+        "AI_GLASSES_VLM_BASE_URL",
+        "AI_GLASSES_VLM_MODEL",
+        "AI_GLASSES_VLM_MAX_IMAGE_WIDTH",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    load_dotenv(env_file)
+    settings = get_settings(env_file=None)
+
+    assert settings.ocr_provider == "paddleocr"
+    assert settings.vlm_provider == "openai_compatible"
+    assert settings.vlm_base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    assert settings.vlm_model == "qwen3-vl-plus"
+    assert settings.vlm_max_image_width == 768
+
+
+def test_load_dotenv_does_not_override_existing_environment_values(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text("AI_GLASSES_VLM_MODEL=qwen3-vl-plus\n", encoding="utf-8")
+    monkeypatch.setenv("AI_GLASSES_VLM_MODEL", "manual-model")
+
+    load_dotenv(env_file)
+    settings = get_settings(env_file=None)
+
+    assert settings.vlm_model == "manual-model"
+
+
+def test_load_dotenv_ignores_comments_blank_lines_and_malformed_lines(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "# local settings",
+                "",
+                "MALFORMED",
+                "AI_GLASSES_VLM_TIMEOUT_SECONDS=45",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("AI_GLASSES_VLM_TIMEOUT_SECONDS", raising=False)
+
+    load_dotenv(env_file)
+    settings = get_settings(env_file=None)
+
+    assert settings.vlm_timeout_seconds == 45

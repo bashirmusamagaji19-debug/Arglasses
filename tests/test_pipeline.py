@@ -12,6 +12,11 @@ class StaticVLMProvider:
         return f"真实 VLM 回答：{question} / {ocr_text} / {image_path}"
 
 
+class StaticSummaryProvider:
+    def summarize_scene(self, question: str, answer: str, ocr_text: str) -> str:
+        return f"真实摘要：{question} / {answer} / {ocr_text}"
+
+
 def test_pipeline_generates_answer_and_persists_memory_event(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     pipeline = MemoryPipeline(store)
@@ -64,3 +69,18 @@ def test_pipeline_uses_injected_vlm_provider(tmp_path):
     result = pipeline.ask(question="屏幕上有什么？", image_path="screen.jpg")
 
     assert result.answer == "真实 VLM 回答：屏幕上有什么？ / 真实 OCR 文本：screen.jpg / screen.jpg"
+
+
+def test_pipeline_uses_injected_summary_provider(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    pipeline = MemoryPipeline(
+        store,
+        ocr_provider=StaticOCRProvider(),
+        vlm_provider=StaticVLMProvider(),
+        summary_provider=StaticSummaryProvider(),
+    )
+
+    result = pipeline.ask(question="屏幕上有什么？", image_path="screen.jpg")
+
+    assert result.scene_summary.startswith("真实摘要：屏幕上有什么？")
+    assert "模拟场景摘要" not in result.scene_summary

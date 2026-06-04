@@ -22,7 +22,7 @@ mock VLM
 -> 保存图片
 -> OCR provider 提取文字
 -> VLM provider 结合图片、OCR 文本和用户问题生成回答
--> 场景摘要
+-> rule-based summary provider 基于问题、回答和 OCR 文本整理场景摘要
 -> SQLite 记忆写入
 -> Streamlit 时间线展示
 ```
@@ -34,6 +34,8 @@ mock VLM
 ```text
 AI_GLASSES_VLM_PROVIDER=mock
 ```
+
+本地可以复制 `.env.example` 为 `.env`，然后把 VLM 配置写进 `.env`。项目启动时会自动读取 `.env`，但不会覆盖已经在 PowerShell 或云端 Secrets 中存在的环境变量。
 
 启用 OpenAI-compatible VLM：
 
@@ -64,6 +66,7 @@ $env:AI_GLASSES_VLM_TIMEOUT_SECONDS="30"
 - 通过 `AI_GLASSES_VLM_MAX_TOKENS` 限制输出长度。
 - 通过 `AI_GLASSES_VLM_MAX_IMAGE_WIDTH` 限制图片宽度，默认 `1024`。
 - 请求前将图片压缩为 JPEG，并使用 `detail: low` 降低视觉处理成本。
+- 场景摘要不额外调用云端模型，只基于本次 VLM 回答、OCR 文本和用户问题整理，避免一次提交产生两次模型费用。
 - UI 顶部显示当前 VLM 模式，并在真实 VLM 模式下提示调用成本。
 
 后续如果做自动抽帧，需要再增加：

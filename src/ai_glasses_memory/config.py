@@ -18,7 +18,28 @@ class Settings:
     vlm_max_image_width: int = 1024
 
 
-def get_settings() -> Settings:
+def load_dotenv(env_file: Path | str | None = Path(".env")) -> None:
+    if env_file is None:
+        return
+
+    path = Path(env_file)
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def get_settings(env_file: Path | str | None = Path(".env")) -> Settings:
+    load_dotenv(env_file)
     return Settings(
         db_path=Path(os.getenv("AI_GLASSES_DB_PATH", "data/memory.sqlite3")),
         ocr_provider=os.getenv("AI_GLASSES_OCR_PROVIDER", "mock"),
