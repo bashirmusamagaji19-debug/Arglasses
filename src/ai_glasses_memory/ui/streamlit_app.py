@@ -4,13 +4,17 @@ import streamlit as st
 
 from ai_glasses_memory.config import get_settings
 from ai_glasses_memory.services.memory_store import MemoryStore
+from ai_glasses_memory.services.ocr import create_ocr_provider
 from ai_glasses_memory.services.pipeline import MemoryPipeline
 from ai_glasses_memory.services.uploads import save_input_image
 
 
 def get_pipeline() -> MemoryPipeline:
     settings = get_settings()
-    return MemoryPipeline(MemoryStore(settings.db_path))
+    return MemoryPipeline(
+        MemoryStore(settings.db_path),
+        ocr_provider=create_ocr_provider(settings.ocr_provider),
+    )
 
 
 st.set_page_config(page_title="AI 眼镜记忆助手", layout="wide")

@@ -2,6 +2,11 @@ from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.pipeline import MemoryPipeline
 
 
+class StaticOCRProvider:
+    def extract_text(self, image_path: str | None) -> str:
+        return f"真实 OCR 文本：{image_path}"
+
+
 def test_pipeline_generates_answer_and_persists_memory_event(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     pipeline = MemoryPipeline(store)
@@ -31,3 +36,13 @@ def test_pipeline_can_search_existing_memory(tmp_path):
 
     assert len(results) == 1
     assert results[0].question == "桌上有没有水杯？"
+
+
+def test_pipeline_uses_injected_ocr_provider(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    pipeline = MemoryPipeline(store, ocr_provider=StaticOCRProvider())
+
+    result = pipeline.ask(question="屏幕上有什么？", image_path="screen.jpg")
+
+    assert result.ocr_text == "真实 OCR 文本：screen.jpg"
+    assert "真实 OCR 文本：screen.jpg" in result.answer

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from ai_glasses_memory.services.ocr import MockOCRProvider
+
 
 class MockAIService:
     """第一周使用的模拟 OCR / VLM 服务。"""
 
     def run_ocr(self, image_path: str | None) -> str:
-        # 修改这里的模拟文案只会影响之后新生成的记忆，SQLite 里已有的旧记录不会自动变化。
-        if image_path:
-            return "模拟 OCR：画面中可能包含电脑屏幕、课程笔记、水杯和一张写着 AI 眼镜项目计划的纸。"
-        return "模拟 OCR：画面中可能包含电脑屏幕、课程笔记、水杯和一张写着 AI 眼镜项目计划的纸。"
+        return MockOCRProvider().extract_text(image_path)
 
     def answer_question(self, question: str, ocr_text: str) -> str:
         return (

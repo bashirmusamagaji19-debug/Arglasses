@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ai_glasses_memory.config import get_settings
 from ai_glasses_memory.models.memory import MemoryEvent
 from ai_glasses_memory.services.memory_store import MemoryStore
+from ai_glasses_memory.services.ocr import create_ocr_provider
 from ai_glasses_memory.services.pipeline import MemoryPipeline
 
 router = APIRouter()
@@ -20,7 +21,10 @@ class AskRequest(BaseModel):
 
 def get_pipeline() -> MemoryPipeline:
     settings = get_settings()
-    return MemoryPipeline(MemoryStore(settings.db_path))
+    return MemoryPipeline(
+        MemoryStore(settings.db_path),
+        ocr_provider=create_ocr_provider(settings.ocr_provider),
+    )
 
 
 @router.get("/health")

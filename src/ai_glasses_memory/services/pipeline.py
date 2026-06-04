@@ -4,6 +4,7 @@ from ai_glasses_memory.models.memory import MemoryEvent, MemoryEventCreate
 from ai_glasses_memory.services.latency import LatencyTracker
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.mock_ai import MockAIService
+from ai_glasses_memory.services.ocr import OCRProvider
 
 
 class MemoryPipeline:
@@ -13,14 +14,19 @@ class MemoryPipeline:
         self,
         store: MemoryStore,
         ai_service: MockAIService | None = None,
+        ocr_provider: OCRProvider | None = None,
     ) -> None:
         self.store = store
         self.ai_service = ai_service or MockAIService()
+        self.ocr_provider = ocr_provider
 
     def ask(self, question: str, image_path: str | None = None) -> MemoryEvent:
         tracker = LatencyTracker()
 
-        ocr_text = self.ai_service.run_ocr(image_path)
+        if self.ocr_provider is None:
+            ocr_text = self.ai_service.run_ocr(image_path)
+        else:
+            ocr_text = self.ocr_provider.extract_text(image_path)
         tracker.mark("ocr")
 
         answer = self.ai_service.answer_question(question, ocr_text)

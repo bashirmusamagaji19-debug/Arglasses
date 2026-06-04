@@ -89,6 +89,19 @@ Render 也可直接使用 `render.yaml`。详细步骤见 [docs/deployment.md](d
 
 如果手机摄像头权限不可用，可以使用备用的图片上传入口。
 
+## PaddleOCR
+
+阶段 3.1 已加入 PaddleOCR provider 开关。默认仍使用 mock OCR；本地安装 OCR 可选依赖后，可以切换到真实 OCR：
+
+```powershell
+python -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+python -m pip install -e ".[dev,ocr]"
+$env:AI_GLASSES_OCR_PROVIDER="paddleocr"
+python -m streamlit run app.py
+```
+
+详细说明见 [docs/phase3-paddleocr.md](docs/phase3-paddleocr.md)。
+
 ## 在线 Demo
 
 👉 **[点此打开在线 Demo]()** ← *部署后填入 Streamlit Cloud 或 Render 的实际 URL*
