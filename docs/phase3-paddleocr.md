@@ -33,23 +33,32 @@ AI_GLASSES_OCR_PROVIDER=paddleocr
 
 ## 本地安装
 
+建议使用项目内虚拟环境，避免 PaddleOCR 的重依赖污染 Anaconda 或系统 Python：
+
+```powershell
+cd D:\ARglasses
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+```
+
 先安装 PaddlePaddle CPU 版：
 
 ```powershell
-python -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+.\.venv\Scripts\python.exe -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 ```
 
 再安装项目和 OCR 可选依赖：
 
 ```powershell
-python -m pip install -e ".[dev,ocr]"
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,ocr]"
+.\.venv\Scripts\python.exe -m pip install "numpy==1.26.4" "pillow==10.4.0" "protobuf==4.25.3" "httpx==0.27.0"
 ```
 
 然后设置环境变量并启动：
 
 ```powershell
 $env:AI_GLASSES_OCR_PROVIDER="paddleocr"
-python -m streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 第一次运行 PaddleOCR 可能会下载模型，耗时较长。建议先在本地跑通，再决定是否放到线上部署环境。
@@ -76,6 +85,15 @@ httpx==0.27.0
 - 阶段 1/2 的线上 demo 需要保持可打开、可演示。
 
 如果要在线上启用 PaddleOCR，先单独验证云平台是否能安装 PaddleOCR 和 PaddlePaddle，再把 OCR 依赖加入部署依赖。
+
+## 后续优化先记录，不打断主线
+
+当前 PaddleOCR 的目标是先证明真实 OCR 能进入视觉记忆 pipeline。后续再优化两个方向：
+
+- OCR 识别速度：处理首次冷启动慢、CPU 推理慢、图片过大等问题。
+- 外文翻译成中文：把英文、日文、韩文等 OCR 文本翻译成中文，再参与回答和记忆写入。
+
+详细优化计划见 [docs/optimization-backlog.md](optimization-backlog.md)。这些优化等完整项目主链路跑通后再做。
 
 ## 面试表述
 

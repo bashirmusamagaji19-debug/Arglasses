@@ -94,10 +94,13 @@ Render 也可直接使用 `render.yaml`。详细步骤见 [docs/deployment.md](d
 阶段 3.1 已加入 PaddleOCR provider 开关。默认仍使用 mock OCR；本地安装 OCR 可选依赖后，可以切换到真实 OCR：
 
 ```powershell
-python -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-python -m pip install -e ".[dev,ocr]"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,ocr]"
+.\.venv\Scripts\python.exe -m pip install "numpy==1.26.4" "pillow==10.4.0" "protobuf==4.25.3" "httpx==0.27.0"
 $env:AI_GLASSES_OCR_PROVIDER="paddleocr"
-python -m streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 详细说明见 [docs/phase3-paddleocr.md](docs/phase3-paddleocr.md)。
@@ -147,5 +150,9 @@ docs/                                 # 架构、部署和学习文档
 - 向量检索：Chroma 或 FAISS。
 - 语音输入：faster-whisper ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
+
+暂不打断主路线的优化项记录在 [docs/optimization-backlog.md](docs/optimization-backlog.md)，包括 OCR 识别速度优化，以及外文 OCR 结果翻译成中文。
+
+真实 VLM 接入路线记录在 [docs/phase3-vlm-provider.md](docs/phase3-vlm-provider.md)。当前采用 OpenAI-compatible provider，默认 mock，可切换到第三方云端 API、租用 GPU 云服务器上的 vLLM，或后续本地 / 局域网模型服务。
 
 最终定位不是“摄像头 + ChatGPT”，而是一个包含 Web 演示端、后端记忆服务、真实 AI 能力模块和硬件输入原型的视觉记忆系统。

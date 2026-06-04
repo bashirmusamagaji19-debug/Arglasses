@@ -5,6 +5,7 @@ from ai_glasses_memory.services.latency import LatencyTracker
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.mock_ai import MockAIService
 from ai_glasses_memory.services.ocr import OCRProvider
+from ai_glasses_memory.services.vlm import MockVLMProvider, VLMProvider
 
 
 class MemoryPipeline:
@@ -15,10 +16,12 @@ class MemoryPipeline:
         store: MemoryStore,
         ai_service: MockAIService | None = None,
         ocr_provider: OCRProvider | None = None,
+        vlm_provider: VLMProvider | None = None,
     ) -> None:
         self.store = store
         self.ai_service = ai_service or MockAIService()
         self.ocr_provider = ocr_provider
+        self.vlm_provider = vlm_provider or MockVLMProvider()
 
     def ask(self, question: str, image_path: str | None = None) -> MemoryEvent:
         tracker = LatencyTracker()
@@ -29,7 +32,7 @@ class MemoryPipeline:
             ocr_text = self.ocr_provider.extract_text(image_path)
         tracker.mark("ocr")
 
-        answer = self.ai_service.answer_question(question, ocr_text)
+        answer = self.vlm_provider.answer_question(question, ocr_text, image_path)
         tracker.mark("vlm")
 
         scene_summary = self.ai_service.summarize_scene(question, answer, ocr_text)

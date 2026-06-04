@@ -7,6 +7,7 @@ from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.ocr import create_ocr_provider
 from ai_glasses_memory.services.pipeline import MemoryPipeline
 from ai_glasses_memory.services.uploads import save_input_image
+from ai_glasses_memory.services.vlm import create_vlm_provider
 
 
 def get_pipeline() -> MemoryPipeline:
@@ -14,12 +15,30 @@ def get_pipeline() -> MemoryPipeline:
     return MemoryPipeline(
         MemoryStore(settings.db_path),
         ocr_provider=create_ocr_provider(settings.ocr_provider),
+        vlm_provider=create_vlm_provider(
+            settings.vlm_provider,
+            base_url=settings.vlm_base_url,
+            api_key=settings.vlm_api_key,
+            model=settings.vlm_model,
+            max_tokens=settings.vlm_max_tokens,
+            timeout_seconds=settings.vlm_timeout_seconds,
+        ),
     )
 
 
 st.set_page_config(page_title="AI 眼镜记忆助手", layout="wide")
 st.title("AI 眼镜实时视觉记忆助手")
 st.caption("手机摄像头第一视角输入 -> 模拟 OCR / 模拟 VLM -> 视觉记忆时间线。")
+
+settings = get_settings()
+ocr_provider_name = settings.ocr_provider.strip().lower()
+st.info(f"当前 OCR 模式：{ocr_provider_name}")
+if ocr_provider_name == "paddleocr":
+    st.warning("PaddleOCR 首次识别会加载模型，可能需要 10-30 秒；后续会更快。")
+vlm_provider_name = settings.vlm_provider.strip().lower()
+st.info(f"当前 VLM 模式：{vlm_provider_name}")
+if vlm_provider_name == "openai_compatible":
+    st.warning("真实 VLM 每次提交都会产生一次模型调用，请控制提交频率和图片大小。")
 
 pipeline = get_pipeline()
 
@@ -31,7 +50,7 @@ with left:
     uploaded_file = st.file_uploader("或上传一张图片作为备用", type=["png", "jpg", "jpeg", "webp"])
     selected_image = camera_image or uploaded_file
     if selected_image is not None:
-        st.image(selected_image, caption="当前画面", use_container_width=True)
+        st.image(selected_image, caption="当前画面", width="stretch")
     question = st.text_input("输入问题", value="我刚才看到了什么？")
     submitted = st.button("提交问题", type="primary")
 

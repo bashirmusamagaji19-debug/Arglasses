@@ -44,3 +44,32 @@ def test_streamlit_ui_exposes_camera_and_upload_inputs():
     assert "st.camera_input" in contents
     assert "st.file_uploader" in contents
     assert "save_input_image(selected_image)" in contents
+
+
+def test_streamlit_ui_reports_ocr_provider_and_uses_supported_image_width():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "当前 OCR 模式" in contents
+    assert "PaddleOCR 首次识别会加载模型" in contents
+    assert 'width="stretch"' in contents
+    assert "use_container_width" not in contents
+
+
+def test_streamlit_ui_reports_vlm_provider_and_cost_warning():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "当前 VLM 模式" in contents
+    assert "真实 VLM 每次提交都会产生一次模型调用" in contents
+
+
+def test_env_example_documents_vlm_provider_settings():
+    env_file = PROJECT_ROOT / ".env.example"
+    contents = env_file.read_text(encoding="utf-8")
+
+    assert "AI_GLASSES_VLM_PROVIDER=mock" in contents
+    assert "AI_GLASSES_VLM_BASE_URL=" in contents
+    assert "AI_GLASSES_VLM_API_KEY=" in contents
+    assert "AI_GLASSES_VLM_MODEL=" in contents
+    assert "AI_GLASSES_VLM_MAX_TOKENS=512" in contents

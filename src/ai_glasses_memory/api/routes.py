@@ -10,6 +10,7 @@ from ai_glasses_memory.models.memory import MemoryEvent
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.ocr import create_ocr_provider
 from ai_glasses_memory.services.pipeline import MemoryPipeline
+from ai_glasses_memory.services.vlm import create_vlm_provider
 
 router = APIRouter()
 
@@ -24,6 +25,14 @@ def get_pipeline() -> MemoryPipeline:
     return MemoryPipeline(
         MemoryStore(settings.db_path),
         ocr_provider=create_ocr_provider(settings.ocr_provider),
+        vlm_provider=create_vlm_provider(
+            settings.vlm_provider,
+            base_url=settings.vlm_base_url,
+            api_key=settings.vlm_api_key,
+            model=settings.vlm_model,
+            max_tokens=settings.vlm_max_tokens,
+            timeout_seconds=settings.vlm_timeout_seconds,
+        ),
     )
 
 

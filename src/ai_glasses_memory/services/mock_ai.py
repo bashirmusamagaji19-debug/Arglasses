@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ai_glasses_memory.services.ocr import MockOCRProvider
+from ai_glasses_memory.services.vlm import MockVLMProvider
 
 
 class MockAIService:
@@ -10,10 +11,7 @@ class MockAIService:
         return MockOCRProvider().extract_text(image_path)
 
     def answer_question(self, question: str, ocr_text: str) -> str:
-        return (
-            f"模拟 VLM 回答：针对问题“{question}”，系统根据当前画面和 OCR 文本判断，"
-            f"相关线索是：{ocr_text}"
-        )
+        return MockVLMProvider().answer_question(question, ocr_text, None)
 
     def summarize_scene(self, question: str, answer: str, ocr_text: str) -> str:
         return (

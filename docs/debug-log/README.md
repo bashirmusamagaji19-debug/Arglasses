@@ -12,3 +12,5 @@
 | 3 | Streamlit Cloud 部署构建失败 | `requirements.txt` 用 `-e .` 不兼容；替换为显式依赖后漏了本地包安装 | [bug-03-requirements-txt-local-package.md](./bug-03-requirements-txt-local-package.md) |
 | 4 | 点击“提交问题”后黑屏 | `app.py` 用 `import *` 转发 Streamlit UI，脚本上下文不稳定 | [bug-04-streamlit-entrypoint-black-screen.md](./bug-04-streamlit-entrypoint-black-screen.md) |
 | 5 | PaddleOCR 安装后真实推理失败 | PaddleOCR 3.x API 和 Windows CPU PaddlePaddle 版本组合不匹配 | [bug-05-paddleocr-windows-cpu-version.md](./bug-05-paddleocr-windows-cpu-version.md) |
+| 6 | Streamlit 图片宽度警告与 OCR 状态不透明 | `use_container_width` 即将废弃，且 PaddleOCR 首次冷启动缺少 UI 提示 | [bug-06-streamlit-width-warning-and-ocr-status.md](./bug-06-streamlit-width-warning-and-ocr-status.md) |
+| 7 | 真实 VLM 调用失败后静默回退到 mock | fallback 保住了 demo，但没有记录真实 API 失败原因 | [bug-07-vlm-silent-fallback.md](./bug-07-vlm-silent-fallback.md) |
