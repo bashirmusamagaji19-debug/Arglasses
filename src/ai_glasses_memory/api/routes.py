@@ -22,6 +22,10 @@ class AskRequest(BaseModel):
     image_path: str | None = None
 
 
+class MutationResult(BaseModel):
+    deleted: int
+
+
 def get_pipeline() -> MemoryPipeline:
     settings = get_settings()
     return MemoryPipeline(
@@ -146,6 +150,36 @@ def list_memories(
     limit: int = 50,
 ) -> list[MemoryEvent]:
     return pipeline.list_memories(limit=limit)
+
+
+@router.delete("/memories", response_model=MutationResult)
+def clear_memories(
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+) -> MutationResult:
+    return MutationResult(deleted=pipeline.clear_memories())
+
+
+@router.delete("/memories/{memory_id}", response_model=MutationResult)
+def delete_memory(
+    memory_id: int,
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+) -> MutationResult:
+    return MutationResult(deleted=pipeline.delete_memory(memory_id))
+
+
+@router.post("/memories/prune", response_model=MutationResult)
+def prune_memories(
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+    keep_latest: int = 50,
+) -> MutationResult:
+    return MutationResult(deleted=pipeline.prune_memories(keep_latest=keep_latest))
+
+
+@router.post("/memories/dedupe", response_model=MutationResult)
+def dedupe_memories(
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+) -> MutationResult:
+    return MutationResult(deleted=pipeline.dedupe_memories())
 
 
 @router.get("/memories/search", response_model=list[MemoryEvent])

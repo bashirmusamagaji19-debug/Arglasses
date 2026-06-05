@@ -4,7 +4,6 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
 
 from ai_glasses_memory.models.memory import MemoryEvent, MemoryEventCreate
 
@@ -78,6 +77,58 @@ class MemoryStore:
             ).fetchall()
         return [self._row_to_event(row) for row in rows]
 
+    def delete_event(self, event_id: int) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM memory_events WHERE id = ?", (event_id,))
+            return int(cursor.rowcount)
+
+    def clear_events(self) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM memory_events")
+            return int(cursor.rowcount)
+
+    def prune_events(self, keep_latest: int) -> int:
+        if keep_latest <= 0:
+            return self.clear_events()
+
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                DELETE FROM memory_events
+                WHERE id NOT IN (
+                    SELECT id
+                    FROM memory_events
+                    ORDER BY datetime(created_at) DESC, id DESC
+                    LIMIT ?
+                )
+                """,
+                (keep_latest,),
+            )
+            return int(cursor.rowcount)
+
+    def dedupe_events(self) -> int:
+        events = self.list_events(limit=10000)
+        seen_keys: set[tuple[str, str, str, str]] = set()
+        duplicate_ids: list[int] = []
+
+        for event in events:
+            key = self._dedupe_key(event)
+            if key in seen_keys:
+                duplicate_ids.append(event.id)
+            else:
+                seen_keys.add(key)
+
+        if not duplicate_ids:
+            return 0
+
+        placeholders = ",".join("?" for _ in duplicate_ids)
+        with self._connect() as conn:
+            cursor = conn.execute(
+                f"DELETE FROM memory_events WHERE id IN ({placeholders})",
+                duplicate_ids,
+            )
+            return int(cursor.rowcount)
+
     def _init_db(self) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -111,4 +162,13 @@ class MemoryStore:
             ocr_text=row["ocr_text"],
             image_path=row["image_path"],
             latency_ms=json.loads(row["latency_ms"]),
+        )
+
+    @staticmethod
+    def _dedupe_key(event: MemoryEvent) -> tuple[str, str, str, str]:
+        return (
+            event.question.strip(),
+            event.answer.strip(),
+            event.scene_summary.strip(),
+            event.ocr_text.strip(),
         )

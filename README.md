@@ -136,6 +136,10 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 - `POST /ask`
 - `GET /memories`
 - `GET /memories/search?q=关键词`
+- `DELETE /memories/{memory_id}`
+- `DELETE /memories`
+- `POST /memories/prune?keep_latest=50`
+- `POST /memories/dedupe`
 
 ## 项目结构
 
@@ -163,6 +167,7 @@ docs/                                 # 架构、部署和学习文档
 
 当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。
 当前历史搜索已从纯关键词匹配升级为轻量语义检索原型，说明见 [docs/phase3-search.md](docs/phase3-search.md)。
+当前已加入记忆管理能力，包括单条删除、清空、保留最近 N 条和精确去重，说明见 [docs/memory-management.md](docs/memory-management.md)。
 
 暂不打断主路线的优化项记录在 [docs/optimization-backlog.md](docs/optimization-backlog.md)，包括 OCR 识别速度优化，以及外文 OCR 结果翻译成中文。
 

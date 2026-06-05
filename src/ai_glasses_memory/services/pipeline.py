@@ -61,3 +61,15 @@ class MemoryPipeline:
 
     def search_memories(self, keyword: str, limit: int = 20) -> list[MemoryEvent]:
         return self.search_provider.search(query=keyword, limit=limit)
+
+    def delete_memory(self, memory_id: int) -> int:
+        return self.store.delete_event(memory_id)
+
+    def clear_memories(self) -> int:
+        return self.store.clear_events()
+
+    def prune_memories(self, keep_latest: int) -> int:
+        return self.store.prune_events(keep_latest=keep_latest)
+
+    def dedupe_memories(self) -> int:
+        return self.store.dedupe_events()

@@ -85,6 +85,23 @@ with search_col:
             st.markdown(f"**{item.created_at.strftime('%Y-%m-%d %H:%M:%S')}**")
             st.write(item.question)
             st.caption(item.scene_summary)
+    st.subheader("记忆管理")
+    keep_latest = st.number_input("只保留最近 N 条", min_value=1, max_value=500, value=50, step=1)
+    if st.button("裁剪记忆"):
+        deleted = pipeline.prune_memories(int(keep_latest))
+        st.session_state["memory_management_message"] = f"已删除 {deleted} 条记忆。"
+        st.rerun()
+    if st.button("去重记忆"):
+        deleted = pipeline.dedupe_memories()
+        st.session_state["memory_management_message"] = f"已删除 {deleted} 条重复记忆。"
+        st.rerun()
+    confirm_clear = st.checkbox("确认清空全部记忆")
+    if st.button("清空全部记忆", disabled=not confirm_clear):
+        deleted = pipeline.clear_memories()
+        st.session_state["memory_management_message"] = f"已删除 {deleted} 条记忆。"
+        st.rerun()
+    if "memory_management_message" in st.session_state:
+        st.success(st.session_state.pop("memory_management_message"))
 
 with timeline_col:
     st.subheader("记忆时间线")
@@ -101,3 +118,7 @@ with timeline_col:
             st.write(memory.ocr_text)
             st.markdown("**延迟统计（ms）**")
             st.json(memory.latency_ms)
+            if st.button("删除这条记忆", key=f"delete-memory-{memory.id}"):
+                deleted = pipeline.delete_memory(memory.id)
+                st.session_state["memory_management_message"] = f"已删除 {deleted} 条记忆。"
+                st.rerun()

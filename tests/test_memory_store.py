@@ -62,3 +62,71 @@ def test_search_events_matches_question_answer_summary_and_ocr(tmp_path):
     assert key_results[0].answer == "钥匙在玄关桌面上。"
     assert len(ocr_results) == 1
     assert ocr_results[0].ocr_text == "AI 眼镜项目第一周计划"
+
+
+def test_delete_event_removes_one_memory(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    event = store.add_event(
+        MemoryEventCreate(
+            question="手上是什么？",
+            answer="手上拿着鼠标。",
+            scene_summary="用户拿着鼠标。",
+        )
+    )
+
+    deleted = store.delete_event(event.id)
+
+    assert deleted == 1
+    assert store.list_events() == []
+
+
+def test_clear_events_removes_all_memories(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    store.add_event(MemoryEventCreate(question="one", answer="answer", scene_summary="summary"))
+    store.add_event(MemoryEventCreate(question="two", answer="answer", scene_summary="summary"))
+
+    deleted = store.clear_events()
+
+    assert deleted == 2
+    assert store.list_events() == []
+
+
+def test_prune_events_keeps_latest_memories(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    first = store.add_event(MemoryEventCreate(question="first", answer="answer", scene_summary="summary"))
+    second = store.add_event(MemoryEventCreate(question="second", answer="answer", scene_summary="summary"))
+    third = store.add_event(MemoryEventCreate(question="third", answer="answer", scene_summary="summary"))
+
+    deleted = store.prune_events(keep_latest=2)
+    remaining = store.list_events()
+
+    assert deleted == 1
+    assert [event.id for event in remaining] == [third.id, second.id]
+    assert first.id not in [event.id for event in remaining]
+
+
+def test_dedupe_events_keeps_latest_duplicate(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    old = store.add_event(
+        MemoryEventCreate(
+            question="手上是什么？",
+            answer="手上拿着黑色无线鼠标。",
+            scene_summary="用户手里拿着黑色无线鼠标。",
+            ocr_text="",
+        )
+    )
+    latest = store.add_event(
+        MemoryEventCreate(
+            question="手上是什么？",
+            answer="手上拿着黑色无线鼠标。",
+            scene_summary="用户手里拿着黑色无线鼠标。",
+            ocr_text="",
+        )
+    )
+
+    deleted = store.dedupe_events()
+    remaining = store.list_events()
+
+    assert deleted == 1
+    assert [event.id for event in remaining] == [latest.id]
+    assert old.id not in [event.id for event in remaining]

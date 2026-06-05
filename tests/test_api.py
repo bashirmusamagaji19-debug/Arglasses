@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from ai_glasses_memory.api.routes import get_pipeline
 from ai_glasses_memory.main import app
+from ai_glasses_memory.models.memory import MemoryEventCreate
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.pipeline import MemoryPipeline
 
@@ -74,5 +75,37 @@ def test_mobile_ask_accepts_image_upload_and_returns_memory(tmp_path):
     assert payload["question"] == "手上是什么？"
     assert payload["image_path"]
     assert Path(payload["image_path"]).exists()
+
+    app.dependency_overrides.clear()
+
+
+def test_api_can_delete_clear_prune_and_dedupe_memories(tmp_path):
+    store = MemoryStore(tmp_path / "manage.sqlite3")
+
+    def override_pipeline() -> MemoryPipeline:
+        return MemoryPipeline(store)
+
+    app.dependency_overrides[get_pipeline] = override_pipeline
+    client = TestClient(app)
+
+    first = store.add_event(MemoryEventCreate(question="one", answer="same", scene_summary="same"))
+    store.add_event(MemoryEventCreate(question="one", answer="same", scene_summary="same"))
+    store.add_event(MemoryEventCreate(question="three", answer="answer", scene_summary="summary"))
+
+    delete_response = client.delete(f"/memories/{first.id}")
+    assert delete_response.status_code == 200
+    assert delete_response.json()["deleted"] == 1
+
+    dedupe_response = client.post("/memories/dedupe")
+    assert dedupe_response.status_code == 200
+    assert dedupe_response.json()["deleted"] == 0
+
+    prune_response = client.post("/memories/prune", params={"keep_latest": 1})
+    assert prune_response.status_code == 200
+    assert prune_response.json()["deleted"] == 1
+
+    clear_response = client.delete("/memories")
+    assert clear_response.status_code == 200
+    assert clear_response.json()["deleted"] == 1
 
     app.dependency_overrides.clear()

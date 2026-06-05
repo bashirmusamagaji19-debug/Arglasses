@@ -90,3 +90,13 @@ def test_env_example_documents_vlm_provider_settings():
     assert "AI_GLASSES_VLM_MODEL=" in contents
     assert "AI_GLASSES_VLM_MAX_TOKENS=512" in contents
     assert "AI_GLASSES_VLM_MAX_IMAGE_WIDTH=1024" in contents
+
+
+def test_streamlit_ui_exposes_memory_management_controls():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "delete_memory" in contents
+    assert "clear_memories" in contents
+    assert "prune_memories" in contents
+    assert "dedupe_memories" in contents
