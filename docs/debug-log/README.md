@@ -16,3 +16,4 @@
 | 7 | 真实 VLM 调用失败后静默回退到 mock | fallback 保住了 demo，但没有记录真实 API 失败原因 | [bug-07-vlm-silent-fallback.md](./bug-07-vlm-silent-fallback.md) |
 | 8 | Streamlit Cloud 缺少 `httpx` 运行依赖 | VLM provider 运行时导入 `httpx`，但依赖只放在 dev 依赖中 | [bug-08-cloud-missing-httpx-runtime-dependency.md](./bug-08-cloud-missing-httpx-runtime-dependency.md) |
 | 9 | 硅基流动 VLM 请求断连 | 真实请求发出后服务端断连，优先压缩图片并降低视觉 detail | [bug-09-siliconflow-vlm-server-disconnected.md](./bug-09-siliconflow-vlm-server-disconnected.md) |
+| 10 | 手机拍照上传原图过大 | 上传边界未压缩 4096x3072 原图，导致 OCR/VLM 下游被迫处理大图 | [bug-10-phone-photo-upload-too-large.md](./bug-10-phone-photo-upload-too-large.md) |

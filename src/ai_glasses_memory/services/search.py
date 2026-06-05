@@ -1,0 +1,107 @@
+from __future__ import annotations
+
+import re
+from typing import Protocol
+
+from ai_glasses_memory.models.memory import MemoryEvent
+from ai_glasses_memory.services.memory_store import MemoryStore
+
+
+class SearchProvider(Protocol):
+    def search(self, query: str, limit: int = 20) -> list[MemoryEvent]:
+        ...
+
+
+class LightweightSemanticSearchProvider:
+    def __init__(self, store: MemoryStore, candidate_limit: int = 100) -> None:
+        self.store = store
+        self.candidate_limit = candidate_limit
+
+    def search(self, query: str, limit: int = 20) -> list[MemoryEvent]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            return []
+
+        candidates = self.store.list_events(limit=max(self.candidate_limit, limit))
+        scored = [
+            (self._score(normalized_query, event), event)
+            for event in candidates
+        ]
+        scored = [(score, event) for score, event in scored if score > 0]
+        scored.sort(key=lambda item: (item[0], item[1].created_at, item[1].id), reverse=True)
+        return [event for _, event in scored[:limit]]
+
+    def _score(self, query: str, event: MemoryEvent) -> float:
+        document = self._event_text(event)
+        score = 0.0
+
+        if query in document:
+            score += 3.0
+
+        keyword_hits = self._keyword_hits(query, document)
+        score += keyword_hits * 0.8
+
+        query_tokens = self._tokens(query)
+        document_tokens = self._tokens(document)
+        if query_tokens and document_tokens:
+            overlap = query_tokens & document_tokens
+            score += len(overlap) / len(query_tokens | document_tokens)
+            score += len(overlap) / len(query_tokens) * 0.6
+
+        score += self._intent_boost(query, document)
+        return score
+
+    @staticmethod
+    def _event_text(event: MemoryEvent) -> str:
+        return "\n".join(
+            [
+                event.question,
+                event.answer,
+                event.scene_summary,
+                event.ocr_text,
+            ]
+        )
+
+    @staticmethod
+    def _keyword_hits(query: str, document: str) -> int:
+        terms = [
+            term
+            for term in re.split(r"[\s,，。！？!?、:：；;（）()]+", query)
+            if len(term) >= 2
+        ]
+        return sum(1 for term in terms if term in document)
+
+    @staticmethod
+    def _tokens(text: str) -> set[str]:
+        normalized = re.sub(r"\s+", "", text.lower())
+        stop_chars = set("我你他她它的是了在有和吗呢啊刚才之前看到什么哪里一个这个那个")
+        chars = {
+            char
+            for char in normalized
+            if "\u4e00" <= char <= "\u9fff" and char not in stop_chars
+        }
+        bigrams = {
+            normalized[index : index + 2]
+            for index in range(max(0, len(normalized) - 1))
+            if all("\u4e00" <= char <= "\u9fff" for char in normalized[index : index + 2])
+        }
+        words = {
+            word
+            for word in re.findall(r"[a-zA-Z0-9_+-]+", text.lower())
+            if len(word) >= 2
+        }
+        return chars | bigrams | words
+
+    @staticmethod
+    def _intent_boost(query: str, document: str) -> float:
+        score = 0.0
+        if any(term in query for term in ["拿", "拿过", "手上", "手里"]):
+            if any(term in document for term in ["拿", "拿着", "手上", "手里", "手中"]):
+                score += 1.2
+        if any(term in query for term in ["屏幕", "电脑", "显示"]):
+            if any(term in document for term in ["屏幕", "电脑", "显示"]):
+                score += 1.2
+        if any(term in query for term in ["文字", "写着", "写了"]):
+            if any(term in document for term in ["文字", "写着", "OCR", "文本"]):
+                score += 1.0
+        return score

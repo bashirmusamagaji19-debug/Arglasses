@@ -5,6 +5,7 @@ from ai_glasses_memory.services.latency import LatencyTracker
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.mock_ai import MockAIService
 from ai_glasses_memory.services.ocr import OCRProvider
+from ai_glasses_memory.services.search import LightweightSemanticSearchProvider, SearchProvider
 from ai_glasses_memory.services.summary import RuleBasedSummaryProvider, SummaryProvider
 from ai_glasses_memory.services.vlm import MockVLMProvider, VLMProvider
 
@@ -19,12 +20,14 @@ class MemoryPipeline:
         ocr_provider: OCRProvider | None = None,
         vlm_provider: VLMProvider | None = None,
         summary_provider: SummaryProvider | None = None,
+        search_provider: SearchProvider | None = None,
     ) -> None:
         self.store = store
         self.ai_service = ai_service or MockAIService()
         self.ocr_provider = ocr_provider
         self.vlm_provider = vlm_provider or MockVLMProvider()
         self.summary_provider = summary_provider or RuleBasedSummaryProvider()
+        self.search_provider = search_provider or LightweightSemanticSearchProvider(store)
 
     def ask(self, question: str, image_path: str | None = None) -> MemoryEvent:
         tracker = LatencyTracker()
@@ -57,4 +60,4 @@ class MemoryPipeline:
         return self.store.list_events(limit=limit)
 
     def search_memories(self, keyword: str, limit: int = 20) -> list[MemoryEvent]:
-        return self.store.search_events(keyword=keyword, limit=limit)
+        return self.search_provider.search(query=keyword, limit=limit)

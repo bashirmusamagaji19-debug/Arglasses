@@ -1,5 +1,7 @@
 from io import BytesIO
 
+from PIL import Image
+
 from ai_glasses_memory.services.uploads import save_input_image
 
 
@@ -34,3 +36,17 @@ def test_save_input_image_uses_default_name_for_camera_capture(tmp_path):
     assert saved_path is not None
     assert saved_path.endswith("camera_capture.jpg")
     assert (tmp_path / "camera_capture.jpg").read_bytes() == b"camera-frame"
+
+
+def test_save_input_image_compresses_large_phone_photo(tmp_path):
+    buffer = BytesIO()
+    Image.new("RGB", (4096, 3072), color=(240, 240, 240)).save(buffer, format="JPEG")
+    image = FakeUploadedFile("phone.jpg", buffer.getvalue())
+
+    saved_path = save_input_image(image, upload_dir=tmp_path)
+
+    assert saved_path is not None
+    assert saved_path.endswith("phone.jpg")
+    with Image.open(saved_path) as saved_image:
+        assert max(saved_image.size) <= 1600
+        assert saved_image.format == "JPEG"

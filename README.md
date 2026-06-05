@@ -157,11 +157,12 @@ docs/                                 # 架构、部署和学习文档
 - 手机摄像头：当前已支持拍照上传；后续再做抽帧和自动提交。
 - 真实 OCR：PaddleOCR 或 EasyOCR。
 - 真实 VLM：多模态模型。
-- 向量检索：Chroma 或 FAISS。
+- 检索：当前使用轻量语义检索原型；后续升级到 Chroma 或 FAISS。
 - 语音输入：faster-whisper ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
 
 当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。
+当前历史搜索已从纯关键词匹配升级为轻量语义检索原型，说明见 [docs/phase3-search.md](docs/phase3-search.md)。
 
 暂不打断主路线的优化项记录在 [docs/optimization-backlog.md](docs/optimization-backlog.md)，包括 OCR 识别速度优化，以及外文 OCR 结果翻译成中文。
 

@@ -17,6 +17,11 @@ class StaticSummaryProvider:
         return f"真实摘要：{question} / {answer} / {ocr_text}"
 
 
+class StaticSearchProvider:
+    def search(self, query: str, limit: int = 20):
+        return [f"search:{query}:{limit}"]
+
+
 def test_pipeline_generates_answer_and_persists_memory_event(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     pipeline = MemoryPipeline(store)
@@ -84,3 +89,12 @@ def test_pipeline_uses_injected_summary_provider(tmp_path):
 
     assert result.scene_summary.startswith("真实摘要：屏幕上有什么？")
     assert "模拟场景摘要" not in result.scene_summary
+
+
+def test_pipeline_uses_injected_search_provider(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    pipeline = MemoryPipeline(store, search_provider=StaticSearchProvider())
+
+    results = pipeline.search_memories("刚才拿过什么", limit=3)
+
+    assert results == ["search:刚才拿过什么:3"]

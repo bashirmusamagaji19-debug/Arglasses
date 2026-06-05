@@ -28,6 +28,14 @@ def test_cloud_requirements_include_runtime_http_client():
     assert '"httpx>=' in pyproject.read_text(encoding="utf-8")
 
 
+def test_cloud_requirements_include_runtime_image_library():
+    requirements = PROJECT_ROOT / "requirements.txt"
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+
+    assert "pillow" in requirements.read_text(encoding="utf-8").lower()
+    assert '"pillow>=' in pyproject.read_text(encoding="utf-8").lower()
+
+
 def test_python_runtime_preference_is_documented():
     runtime = PROJECT_ROOT / "runtime.txt"
 
