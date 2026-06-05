@@ -1,6 +1,8 @@
 from ai_glasses_memory.models.memory import MemoryEventCreate
+from ai_glasses_memory.services.embedding import HashEmbeddingProvider
 from ai_glasses_memory.services.memory_store import MemoryStore
-from ai_glasses_memory.services.search import LightweightSemanticSearchProvider
+from ai_glasses_memory.services.search import LightweightSemanticSearchProvider, VectorSearchProvider
+from ai_glasses_memory.services.vector_index import SQLiteVectorIndex
 
 
 def test_lightweight_semantic_search_recalls_related_memory_without_exact_keyword(tmp_path):
@@ -87,3 +89,56 @@ def test_lightweight_semantic_search_filters_mock_memory_when_real_hits_exist(tm
     results = provider.search("鼠标")
 
     assert [event.id for event in results] == [real_event.id]
+
+
+def test_vector_search_provider_finds_semantic_memory(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    mouse_event = store.add_event(
+        MemoryEventCreate(
+            question="我刚才看到了什么？",
+            answer="你刚才看到了一只黑色无线鼠标。",
+            scene_summary="黑色无线鼠标放在桌面上。",
+            ocr_text="",
+        )
+    )
+    store.add_event(
+        MemoryEventCreate(
+            question="桌上有什么饮品？",
+            answer="桌上有一个透明水杯。",
+            scene_summary="透明水杯在桌面右侧。",
+            ocr_text="",
+        )
+    )
+    provider = VectorSearchProvider(
+        store=store,
+        vector_index=SQLiteVectorIndex(tmp_path / "vectors.sqlite3"),
+        embedding_provider=HashEmbeddingProvider(dimensions=64),
+    )
+
+    provider.rebuild_index()
+    results = provider.search("无线鼠标", limit=1)
+
+    assert [event.id for event in results] == [mouse_event.id]
+
+
+def test_vector_search_provider_rebuilds_from_sqlite_after_clear_index(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    event = store.add_event(
+        MemoryEventCreate(
+            question="屏幕上是什么？",
+            answer="屏幕上显示 AI 眼镜项目计划。",
+            scene_summary="电脑屏幕显示项目计划。",
+            ocr_text="AI 眼镜项目计划",
+        )
+    )
+    vector_index = SQLiteVectorIndex(tmp_path / "vectors.sqlite3")
+    provider = VectorSearchProvider(
+        store=store,
+        vector_index=vector_index,
+        embedding_provider=HashEmbeddingProvider(dimensions=64),
+    )
+
+    vector_index.clear()
+    provider.rebuild_index()
+
+    assert [item.id for item in provider.search("项目计划", limit=1)] == [event.id]

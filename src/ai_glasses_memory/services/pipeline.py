@@ -45,7 +45,7 @@ class MemoryPipeline:
         tracker.mark("summary")
 
         latency_ms = tracker.finish()
-        return self.store.add_event(
+        event = self.store.add_event(
             MemoryEventCreate(
                 question=question,
                 answer=answer,
@@ -55,6 +55,8 @@ class MemoryPipeline:
                 latency_ms=latency_ms,
             )
         )
+        self._sync_search_index()
+        return event
 
     def list_memories(self, limit: int = 50) -> list[MemoryEvent]:
         return self.store.list_events(limit=limit)
@@ -63,13 +65,29 @@ class MemoryPipeline:
         return self.search_provider.search(query=keyword, limit=limit)
 
     def delete_memory(self, memory_id: int) -> int:
-        return self.store.delete_event(memory_id)
+        deleted = self.store.delete_event(memory_id)
+        if deleted:
+            self._sync_search_index()
+        return deleted
 
     def clear_memories(self) -> int:
-        return self.store.clear_events()
+        deleted = self.store.clear_events()
+        self._sync_search_index()
+        return deleted
 
     def prune_memories(self, keep_latest: int) -> int:
-        return self.store.prune_events(keep_latest=keep_latest)
+        deleted = self.store.prune_events(keep_latest=keep_latest)
+        if deleted:
+            self._sync_search_index()
+        return deleted
 
     def dedupe_memories(self) -> int:
-        return self.store.dedupe_events()
+        deleted = self.store.dedupe_events()
+        if deleted:
+            self._sync_search_index()
+        return deleted
+
+    def _sync_search_index(self) -> None:
+        rebuild = getattr(self.search_provider, "rebuild_index", None)
+        if callable(rebuild):
+            rebuild()

@@ -100,3 +100,22 @@ def test_streamlit_ui_exposes_memory_management_controls():
     assert "clear_memories" in contents
     assert "prune_memories" in contents
     assert "dedupe_memories" in contents
+
+
+def test_env_example_documents_vector_search_settings():
+    env_file = PROJECT_ROOT / ".env.example"
+    contents = env_file.read_text(encoding="utf-8")
+
+    assert "AI_GLASSES_SEARCH_PROVIDER=lightweight" in contents
+    assert "AI_GLASSES_VECTOR_DB_PATH=data/vector_memory.sqlite3" in contents
+    assert "AI_GLASSES_EMBEDDING_PROVIDER=hash" in contents
+    assert "AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5" in contents
+    assert "AI_GLASSES_EMBEDDING_DIMENSIONS=384" in contents
+
+
+def test_api_and_streamlit_wire_search_provider_factory():
+    api_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "api" / "routes.py"
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+
+    assert "create_search_provider" in api_file.read_text(encoding="utf-8")
+    assert "create_search_provider" in ui_file.read_text(encoding="utf-8")

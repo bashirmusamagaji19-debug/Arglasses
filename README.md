@@ -126,7 +126,7 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 | 图片上传 + 提问 | 上传一张图片，输入问题（如"我刚才看到了什么？"） |
 | 模拟回答与场景摘要 | 系统生成模拟 OCR 文本、VLM 回答和场景摘要 |
 | 记忆时间线 | 自动保存每次交互记录，按时间倒序展示 |
-| 历史检索 | 通过关键词搜索历史记忆事件 |
+| 历史检索 | 默认使用轻量语义检索，也可切换到本地向量检索 |
 
 ## API
 
@@ -161,12 +161,12 @@ docs/                                 # 架构、部署和学习文档
 - 手机摄像头：当前已支持拍照上传；后续再做抽帧和自动提交。
 - 真实 OCR：PaddleOCR 或 EasyOCR。
 - 真实 VLM：多模态模型。
-- 检索：当前使用轻量语义检索原型；后续升级到 Chroma 或 FAISS。
+- 检索：默认使用轻量语义检索；本地可切换到向量检索，后续可升级到 Chroma 或 FAISS。
 - 语音输入：faster-whisper ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
 
 当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。
-当前历史搜索已从纯关键词匹配升级为轻量语义检索原型，说明见 [docs/phase3-search.md](docs/phase3-search.md)。
+当前历史搜索已从纯关键词匹配升级为 provider 化检索：默认轻量语义检索，本地可切换到向量检索，说明见 [docs/phase3-search.md](docs/phase3-search.md) 和 [docs/vector-search.md](docs/vector-search.md)。
 当前已加入记忆管理能力，包括单条删除、清空、保留最近 N 条和精确去重，说明见 [docs/memory-management.md](docs/memory-management.md)。
 
 暂不打断主路线的优化项记录在 [docs/optimization-backlog.md](docs/optimization-backlog.md)，包括 OCR 识别速度优化，以及外文 OCR 结果翻译成中文。

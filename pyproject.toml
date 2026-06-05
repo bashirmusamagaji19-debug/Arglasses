@@ -21,6 +21,9 @@ dev = [
 ocr = [
     "paddleocr==3.6.0",
 ]
+embedding = [
+    "sentence-transformers>=3.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

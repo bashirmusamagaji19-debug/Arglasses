@@ -1,5 +1,9 @@
+from ai_glasses_memory.models.memory import MemoryEventCreate
+from ai_glasses_memory.services.embedding import HashEmbeddingProvider
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.pipeline import MemoryPipeline
+from ai_glasses_memory.services.search import VectorSearchProvider
+from ai_glasses_memory.services.vector_index import SQLiteVectorIndex
 
 
 class StaticOCRProvider:
@@ -98,3 +102,44 @@ def test_pipeline_uses_injected_search_provider(tmp_path):
     results = pipeline.search_memories("刚才拿过什么", limit=3)
 
     assert results == ["search:刚才拿过什么:3"]
+
+
+def test_pipeline_indexes_new_memory_for_vector_search(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    vector_search = VectorSearchProvider(
+        store=store,
+        vector_index=SQLiteVectorIndex(tmp_path / "vectors.sqlite3"),
+        embedding_provider=HashEmbeddingProvider(dimensions=64),
+    )
+    pipeline = MemoryPipeline(store, search_provider=vector_search)
+
+    event = pipeline.ask(question="我刚才看到鼠标了吗？", image_path=None)
+
+    assert [item.id for item in pipeline.search_memories("鼠标", limit=1)] == [event.id]
+
+
+def test_pipeline_rebuilds_vector_index_after_memory_cleanup(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    vector_search = VectorSearchProvider(
+        store=store,
+        vector_index=SQLiteVectorIndex(tmp_path / "vectors.sqlite3"),
+        embedding_provider=HashEmbeddingProvider(dimensions=64),
+    )
+    pipeline = MemoryPipeline(store, search_provider=vector_search)
+
+    first = store.add_event(
+        MemoryEventCreate(question="鼠标在哪里", answer="桌上有鼠标", scene_summary="鼠标在桌面")
+    )
+    second = store.add_event(
+        MemoryEventCreate(question="水杯在哪里", answer="桌上有水杯", scene_summary="水杯在桌面")
+    )
+    vector_search.rebuild_index()
+
+    assert pipeline.delete_memory(first.id) == 1
+
+    assert [result.memory_id for result in vector_search.vector_index.search(
+        vector_search.embedding_provider.embed_text("鼠标"),
+        limit=2,
+    )] == [second.id]
+    assert [item.id for item in pipeline.search_memories("水杯", limit=1)] == [second.id]
+    assert first.id not in [item.id for item in pipeline.search_memories("鼠标", limit=5)]

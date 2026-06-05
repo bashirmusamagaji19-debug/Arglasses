@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,30 +20,31 @@ class MemoryStore:
 
     def add_event(self, event: MemoryEventCreate) -> MemoryEvent:
         created_at = datetime.now(timezone.utc)
-        with self._connect() as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO memory_events (
-                    created_at, question, answer, scene_summary,
-                    ocr_text, image_path, latency_ms
+        with closing(self._connect()) as conn:
+            with conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO memory_events (
+                        created_at, question, answer, scene_summary,
+                        ocr_text, image_path, latency_ms
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        created_at.isoformat(),
+                        event.question,
+                        event.answer,
+                        event.scene_summary,
+                        event.ocr_text,
+                        event.image_path,
+                        json.dumps(event.latency_ms, ensure_ascii=False),
+                    ),
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    created_at.isoformat(),
-                    event.question,
-                    event.answer,
-                    event.scene_summary,
-                    event.ocr_text,
-                    event.image_path,
-                    json.dumps(event.latency_ms, ensure_ascii=False),
-                ),
-            )
-            event_id = int(cursor.lastrowid)
+                event_id = int(cursor.lastrowid)
         return MemoryEvent(id=event_id, created_at=created_at, **event.model_dump())
 
     def list_events(self, limit: int = 50) -> list[MemoryEvent]:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             rows = conn.execute(
                 """
                 SELECT id, created_at, question, answer, scene_summary,
@@ -61,7 +63,7 @@ class MemoryStore:
             return []
 
         pattern = f"%{normalized}%"
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             rows = conn.execute(
                 """
                 SELECT id, created_at, question, answer, scene_summary,
@@ -79,33 +81,36 @@ class MemoryStore:
         return [self._row_to_event(row) for row in rows]
 
     def delete_event(self, event_id: int) -> int:
-        with self._connect() as conn:
-            cursor = conn.execute("DELETE FROM memory_events WHERE id = ?", (event_id,))
-            return int(cursor.rowcount)
+        with closing(self._connect()) as conn:
+            with conn:
+                cursor = conn.execute("DELETE FROM memory_events WHERE id = ?", (event_id,))
+                return int(cursor.rowcount)
 
     def clear_events(self) -> int:
-        with self._connect() as conn:
-            cursor = conn.execute("DELETE FROM memory_events")
-            return int(cursor.rowcount)
+        with closing(self._connect()) as conn:
+            with conn:
+                cursor = conn.execute("DELETE FROM memory_events")
+                return int(cursor.rowcount)
 
     def prune_events(self, keep_latest: int) -> int:
         if keep_latest <= 0:
             return self.clear_events()
 
-        with self._connect() as conn:
-            cursor = conn.execute(
-                """
-                DELETE FROM memory_events
-                WHERE id NOT IN (
-                    SELECT id
-                    FROM memory_events
-                    ORDER BY datetime(created_at) DESC, id DESC
-                    LIMIT ?
+        with closing(self._connect()) as conn:
+            with conn:
+                cursor = conn.execute(
+                    """
+                    DELETE FROM memory_events
+                    WHERE id NOT IN (
+                        SELECT id
+                        FROM memory_events
+                        ORDER BY datetime(created_at) DESC, id DESC
+                        LIMIT ?
+                    )
+                    """,
+                    (keep_latest,),
                 )
-                """,
-                (keep_latest,),
-            )
-            return int(cursor.rowcount)
+                return int(cursor.rowcount)
 
     def dedupe_events(self) -> int:
         events = self.list_events(limit=10000)
@@ -123,29 +128,31 @@ class MemoryStore:
             return 0
 
         placeholders = ",".join("?" for _ in duplicate_ids)
-        with self._connect() as conn:
-            cursor = conn.execute(
-                f"DELETE FROM memory_events WHERE id IN ({placeholders})",
-                duplicate_ids,
-            )
-            return int(cursor.rowcount)
+        with closing(self._connect()) as conn:
+            with conn:
+                cursor = conn.execute(
+                    f"DELETE FROM memory_events WHERE id IN ({placeholders})",
+                    duplicate_ids,
+                )
+                return int(cursor.rowcount)
 
     def _init_db(self) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS memory_events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    created_at TEXT NOT NULL,
-                    question TEXT NOT NULL,
-                    answer TEXT NOT NULL,
-                    scene_summary TEXT NOT NULL,
-                    ocr_text TEXT NOT NULL DEFAULT '',
-                    image_path TEXT,
-                    latency_ms TEXT NOT NULL DEFAULT '{}'
+        with closing(self._connect()) as conn:
+            with conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS memory_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        created_at TEXT NOT NULL,
+                        question TEXT NOT NULL,
+                        answer TEXT NOT NULL,
+                        scene_summary TEXT NOT NULL,
+                        ocr_text TEXT NOT NULL DEFAULT '',
+                        image_path TEXT,
+                        latency_ms TEXT NOT NULL DEFAULT '{}'
+                    )
+                    """
                 )
-                """
-            )
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

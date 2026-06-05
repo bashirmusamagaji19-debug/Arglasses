@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Protocol
 
 from ai_glasses_memory.models.memory import MemoryEvent
+from ai_glasses_memory.services.embedding import EmbeddingProvider, create_embedding_provider
 from ai_glasses_memory.services.memory_store import MemoryStore
+from ai_glasses_memory.services.vector_index import SQLiteVectorIndex
 
 
 class SearchProvider(Protocol):
@@ -23,10 +26,7 @@ class LightweightSemanticSearchProvider:
             return []
 
         candidates = self.store.list_events(limit=max(self.candidate_limit, limit))
-        scored = [
-            (self._score(normalized_query, event), event)
-            for event in candidates
-        ]
+        scored = [(self._score(normalized_query, event), event) for event in candidates]
         scored = [(score, event) for score, event in scored if score > 0]
         real_scored = [
             (score, event)
@@ -86,7 +86,7 @@ class LightweightSemanticSearchProvider:
     def _keyword_hits(query: str, document: str) -> int:
         terms = [
             term
-            for term in re.split(r"[\s,，。！？!?、:：；;（）()]+", query)
+            for term in re.split(r"[\s,，。！？?、：；;（）()]+", query)
             if len(term) >= 2
         ]
         return sum(1 for term in terms if term in document)
@@ -125,3 +125,90 @@ class LightweightSemanticSearchProvider:
             if any(term in document for term in ["文字", "写着", "OCR", "文本"]):
                 score += 1.0
         return score
+
+
+class VectorSearchProvider:
+    def __init__(
+        self,
+        store: MemoryStore,
+        vector_index: SQLiteVectorIndex,
+        embedding_provider: EmbeddingProvider,
+        fallback_provider: SearchProvider | None = None,
+    ) -> None:
+        self.store = store
+        self.vector_index = vector_index
+        self.embedding_provider = embedding_provider
+        self.fallback_provider = fallback_provider or LightweightSemanticSearchProvider(store)
+
+    def search(self, query: str, limit: int = 20) -> list[MemoryEvent]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            return []
+
+        results = self.vector_index.search(
+            self.embedding_provider.embed_text(normalized_query),
+            limit=limit,
+        )
+        if not results:
+            return self.fallback_provider.search(query=query, limit=limit)
+
+        events_by_id = {event.id: event for event in self.store.list_events(limit=10000)}
+        events = [
+            events_by_id[result.memory_id]
+            for result in results
+            if result.memory_id in events_by_id
+        ]
+        if events:
+            return events
+        return self.fallback_provider.search(query=query, limit=limit)
+
+    def index_event(self, event: MemoryEvent) -> None:
+        text = self._embedding_text(event)
+        self.vector_index.upsert(
+            memory_id=event.id,
+            vector=self.embedding_provider.embed_text(text),
+            text=text,
+        )
+
+    def rebuild_index(self) -> None:
+        self.vector_index.clear()
+        for event in reversed(self.store.list_events(limit=10000)):
+            self.index_event(event)
+
+    @staticmethod
+    def _embedding_text(event: MemoryEvent) -> str:
+        return "\n".join(
+            [
+                f"question: {event.question}",
+                f"answer: {event.answer}",
+                f"summary: {event.scene_summary}",
+                f"ocr: {event.ocr_text}",
+            ]
+        )
+
+
+def create_search_provider(
+    provider: str,
+    *,
+    store: MemoryStore,
+    vector_db_path: str | Path,
+    embedding_provider: str,
+    embedding_model: str,
+    embedding_dimensions: int,
+) -> SearchProvider:
+    normalized = provider.strip().lower()
+    if normalized in {"", "lightweight", "mock"}:
+        return LightweightSemanticSearchProvider(store)
+    if normalized == "vector":
+        vector_provider = VectorSearchProvider(
+            store=store,
+            vector_index=SQLiteVectorIndex(vector_db_path),
+            embedding_provider=create_embedding_provider(
+                embedding_provider,
+                model_name=embedding_model,
+                dimensions=embedding_dimensions,
+            ),
+        )
+        vector_provider.rebuild_index()
+        return vector_provider
+    raise ValueError(f"Unsupported search provider: {provider}")

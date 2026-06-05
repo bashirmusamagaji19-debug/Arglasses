@@ -66,3 +66,35 @@ def test_load_dotenv_ignores_comments_blank_lines_and_malformed_lines(tmp_path, 
     settings = get_settings(env_file=None)
 
     assert settings.vlm_timeout_seconds == 45
+
+
+def test_settings_include_search_and_embedding_options(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "AI_GLASSES_SEARCH_PROVIDER=vector",
+                "AI_GLASSES_VECTOR_DB_PATH=data/test_vectors.sqlite3",
+                "AI_GLASSES_EMBEDDING_PROVIDER=hash",
+                "AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5",
+                "AI_GLASSES_EMBEDDING_DIMENSIONS=64",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    for name in [
+        "AI_GLASSES_SEARCH_PROVIDER",
+        "AI_GLASSES_VECTOR_DB_PATH",
+        "AI_GLASSES_EMBEDDING_PROVIDER",
+        "AI_GLASSES_EMBEDDING_MODEL",
+        "AI_GLASSES_EMBEDDING_DIMENSIONS",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings(env_file)
+
+    assert settings.search_provider == "vector"
+    assert settings.vector_db_path.as_posix() == "data/test_vectors.sqlite3"
+    assert settings.embedding_provider == "hash"
+    assert settings.embedding_model == "BAAI/bge-small-zh-v1.5"
+    assert settings.embedding_dimensions == 64

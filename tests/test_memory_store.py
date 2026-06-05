@@ -159,3 +159,14 @@ def test_dedupe_events_removes_near_duplicate_with_same_question_and_ocr(tmp_pat
     assert deleted == 1
     assert [event.id for event in remaining] == [latest.id]
     assert old.id not in [event.id for event in remaining]
+
+
+def test_memory_store_releases_sqlite_file_after_operations(tmp_path):
+    db_path = tmp_path / "memory.sqlite3"
+    store = MemoryStore(db_path)
+    store.add_event(MemoryEventCreate(question="q", answer="a", scene_summary="s"))
+    assert store.list_events()
+
+    db_path.unlink()
+
+    assert not db_path.exists()
