@@ -130,3 +130,32 @@ def test_dedupe_events_keeps_latest_duplicate(tmp_path):
     assert deleted == 1
     assert [event.id for event in remaining] == [latest.id]
     assert old.id not in [event.id for event in remaining]
+
+
+def test_dedupe_events_removes_near_duplicate_with_same_question_and_ocr(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    old = store.add_event(
+        MemoryEventCreate(
+            question="手上拿着什么",
+            answer="手上拿着一部贴有“如意”“所得皆所愿”等祝福贴纸的手机。",
+            scene_summary="问题：手上拿着什么。OCR：PaddleOCR：所得皆所顺 如意。",
+            ocr_text="PaddleOCR：所得皆所顺 如意",
+            latency_ms={"total": 127479.891},
+        )
+    )
+    latest = store.add_event(
+        MemoryEventCreate(
+            question="手上拿着什么",
+            answer="手上拿着一部贴有“如意”“所得皆所顺”等祝福贴纸的手机。",
+            scene_summary="问题：手上拿着什么。OCR：PaddleOCR：所得皆所顺 如意。",
+            ocr_text="PaddleOCR：所得皆所顺 如意",
+            latency_ms={"total": 9925.148},
+        )
+    )
+
+    deleted = store.dedupe_events()
+    remaining = store.list_events()
+
+    assert deleted == 1
+    assert [event.id for event in remaining] == [latest.id]
+    assert old.id not in [event.id for event in remaining]

@@ -40,6 +40,34 @@
 
 这些能力放在 `MemoryStore` 和 `MemoryPipeline`，同时暴露给 FastAPI 和 Streamlit UI。
 
+## 二次问题：看起来重复但没有被去重
+
+真实测试中出现过两条非常接近的记忆：
+
+```text
+问题：手上拿着什么
+OCR：PaddleOCR：所得皆所顺 如意
+回答 A：所得皆所愿
+回答 B：所得皆所顺
+```
+
+用户视角下这两条来自同一张图、同一个问题，应该被当成重复记忆。但第一版去重规则使用：
+
+```text
+question + answer + scene_summary + ocr_text
+```
+
+这导致 VLM 回答只要有一个字不同，就无法命中重复 key。
+
+修复后规则改为：
+
+```text
+有 OCR：question + ocr_text
+无 OCR：question + answer + scene_summary
+```
+
+这样可以清掉重复拍摄 / 重复提交产生的近重复记忆，同时避免在没有 OCR 证据时误删不同场景。
+
 ## 为什么这样做
 
 如果直接接 Chroma / FAISS，SQLite 和向量索引会同时存在。那时删除记忆不仅要删 SQLite，还要删对应 embedding。先把管理入口做出来，后续只需要在 pipeline 层补向量索引同步，不需要改 UI 和 API 入口。

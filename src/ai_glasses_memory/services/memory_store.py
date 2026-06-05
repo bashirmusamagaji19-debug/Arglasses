@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -108,7 +109,7 @@ class MemoryStore:
 
     def dedupe_events(self) -> int:
         events = self.list_events(limit=10000)
-        seen_keys: set[tuple[str, str, str, str]] = set()
+        seen_keys: set[tuple[str, ...]] = set()
         duplicate_ids: list[int] = []
 
         for event in events:
@@ -165,10 +166,25 @@ class MemoryStore:
         )
 
     @staticmethod
-    def _dedupe_key(event: MemoryEvent) -> tuple[str, str, str, str]:
+    def _dedupe_key(event: MemoryEvent) -> tuple[str, ...]:
+        normalized_question = MemoryStore._normalize_text(event.question)
+        normalized_ocr = MemoryStore._normalize_ocr_text(event.ocr_text)
+        if normalized_ocr:
+            return ("question_ocr", normalized_question, normalized_ocr)
+
         return (
-            event.question.strip(),
-            event.answer.strip(),
-            event.scene_summary.strip(),
-            event.ocr_text.strip(),
+            "exact",
+            normalized_question,
+            MemoryStore._normalize_text(event.answer),
+            MemoryStore._normalize_text(event.scene_summary),
         )
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        normalized = re.sub(r"\s+", "", value.strip().lower())
+        return normalized.strip("。！？!?.,，、；;：:")
+
+    @staticmethod
+    def _normalize_ocr_text(value: str) -> str:
+        normalized = MemoryStore._normalize_text(value)
+        return re.sub(r"^(paddleocr|mockocr|模拟ocr)[:：]", "", normalized)
