@@ -55,7 +55,7 @@ class MemoryPipeline:
                 latency_ms=latency_ms,
             )
         )
-        self._sync_search_index()
+        self._index_search_event(event)
         return event
 
     def list_memories(self, limit: int = 50) -> list[MemoryEvent]:
@@ -91,3 +91,10 @@ class MemoryPipeline:
         rebuild = getattr(self.search_provider, "rebuild_index", None)
         if callable(rebuild):
             rebuild()
+
+    def _index_search_event(self, event: MemoryEvent) -> None:
+        index_event = getattr(self.search_provider, "index_event", None)
+        if callable(index_event):
+            index_event(event)
+            return
+        self._sync_search_index()

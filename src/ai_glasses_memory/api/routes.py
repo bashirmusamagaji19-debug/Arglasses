@@ -6,14 +6,10 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from ai_glasses_memory.config import get_settings
 from ai_glasses_memory.models.memory import MemoryEvent
-from ai_glasses_memory.services.memory_store import MemoryStore
-from ai_glasses_memory.services.ocr import create_ocr_provider
+from ai_glasses_memory.services.factory import create_pipeline
 from ai_glasses_memory.services.pipeline import MemoryPipeline
-from ai_glasses_memory.services.search import create_search_provider
 from ai_glasses_memory.services.uploads import save_input_image
-from ai_glasses_memory.services.vlm import create_vlm_provider
 
 router = APIRouter()
 
@@ -28,29 +24,7 @@ class MutationResult(BaseModel):
 
 
 def get_pipeline() -> MemoryPipeline:
-    settings = get_settings()
-    store = MemoryStore(settings.db_path)
-    return MemoryPipeline(
-        store,
-        ocr_provider=create_ocr_provider(settings.ocr_provider),
-        vlm_provider=create_vlm_provider(
-            settings.vlm_provider,
-            base_url=settings.vlm_base_url,
-            api_key=settings.vlm_api_key,
-            model=settings.vlm_model,
-            max_tokens=settings.vlm_max_tokens,
-            timeout_seconds=settings.vlm_timeout_seconds,
-            max_image_width=settings.vlm_max_image_width,
-        ),
-        search_provider=create_search_provider(
-            settings.search_provider,
-            store=store,
-            vector_db_path=settings.vector_db_path,
-            embedding_provider=settings.embedding_provider,
-            embedding_model=settings.embedding_model,
-            embedding_dimensions=settings.embedding_dimensions,
-        ),
-    )
+    return create_pipeline()
 
 
 @router.get("/health")

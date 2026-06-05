@@ -134,23 +134,30 @@ class VectorSearchProvider:
         vector_index: SQLiteVectorIndex,
         embedding_provider: EmbeddingProvider,
         fallback_provider: SearchProvider | None = None,
+        min_score: float = 0.2,
     ) -> None:
         self.store = store
         self.vector_index = vector_index
         self.embedding_provider = embedding_provider
         self.fallback_provider = fallback_provider or LightweightSemanticSearchProvider(store)
+        self.min_score = min_score
+        self._index_ready = False
 
     def search(self, query: str, limit: int = 20) -> list[MemoryEvent]:
         normalized_query = query.strip()
         if not normalized_query:
             return []
 
+        self._ensure_index_ready()
         results = self.vector_index.search(
             self.embedding_provider.embed_text(normalized_query),
             limit=limit,
         )
         if not results:
             return self.fallback_provider.search(query=query, limit=limit)
+        results = [result for result in results if result.score >= self.min_score]
+        if not results:
+            return []
 
         events_by_id = {event.id: event for event in self.store.list_events(limit=10000)}
         events = [
@@ -158,6 +165,13 @@ class VectorSearchProvider:
             for result in results
             if result.memory_id in events_by_id
         ]
+        real_events = [
+            event
+            for event in events
+            if not LightweightSemanticSearchProvider._looks_like_mock_event(event)
+        ]
+        if real_events:
+            events = real_events
         if events:
             return events
         return self.fallback_provider.search(query=query, limit=limit)
@@ -174,6 +188,14 @@ class VectorSearchProvider:
         self.vector_index.clear()
         for event in reversed(self.store.list_events(limit=10000)):
             self.index_event(event)
+        self._index_ready = True
+
+    def mark_index_stale(self) -> None:
+        self._index_ready = False
+
+    def _ensure_index_ready(self) -> None:
+        if not self._index_ready:
+            self.rebuild_index()
 
     @staticmethod
     def _embedding_text(event: MemoryEvent) -> str:
@@ -209,6 +231,5 @@ def create_search_provider(
                 dimensions=embedding_dimensions,
             ),
         )
-        vector_provider.rebuild_index()
         return vector_provider
     raise ValueError(f"Unsupported search provider: {provider}")

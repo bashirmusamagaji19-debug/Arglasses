@@ -26,6 +26,20 @@ class StaticSearchProvider:
         return [f"search:{query}:{limit}"]
 
 
+class IncrementalSearchProvider:
+    def __init__(self) -> None:
+        self.indexed_ids: list[int] = []
+
+    def search(self, query: str, limit: int = 20):
+        return []
+
+    def index_event(self, event):
+        self.indexed_ids.append(event.id)
+
+    def rebuild_index(self):
+        raise AssertionError("new memories should be indexed incrementally")
+
+
 def test_pipeline_generates_answer_and_persists_memory_event(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     pipeline = MemoryPipeline(store)
@@ -116,6 +130,16 @@ def test_pipeline_indexes_new_memory_for_vector_search(tmp_path):
     event = pipeline.ask(question="我刚才看到鼠标了吗？", image_path=None)
 
     assert [item.id for item in pipeline.search_memories("鼠标", limit=1)] == [event.id]
+
+
+def test_pipeline_indexes_new_memory_incrementally_when_supported(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    search_provider = IncrementalSearchProvider()
+    pipeline = MemoryPipeline(store, search_provider=search_provider)
+
+    event = pipeline.ask(question="鼠标在哪里？", image_path=None)
+
+    assert search_provider.indexed_ids == [event.id]
 
 
 def test_pipeline_rebuilds_vector_index_after_memory_cleanup(tmp_path):

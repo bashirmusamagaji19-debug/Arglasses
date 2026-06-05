@@ -113,12 +113,22 @@ def test_env_example_documents_vector_search_settings():
     assert "AI_GLASSES_EMBEDDING_DIMENSIONS=384" in contents
 
 
+def test_embedding_extra_includes_torchvision_for_transformers_image_processors():
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    contents = pyproject.read_text(encoding="utf-8")
+
+    assert '"sentence-transformers>=' in contents
+    assert '"torchvision==0.27.0"' in contents
+
+
 def test_api_and_streamlit_wire_search_provider_factory():
     api_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "api" / "routes.py"
     ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    factory_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "services" / "factory.py"
 
-    assert "create_search_provider" in api_file.read_text(encoding="utf-8")
-    assert "create_search_provider" in ui_file.read_text(encoding="utf-8")
+    assert "create_pipeline" in api_file.read_text(encoding="utf-8")
+    assert "create_pipeline" in ui_file.read_text(encoding="utf-8")
+    assert "create_search_provider" in factory_file.read_text(encoding="utf-8")
 
 
 def test_streamlit_ui_reports_search_and_embedding_provider():

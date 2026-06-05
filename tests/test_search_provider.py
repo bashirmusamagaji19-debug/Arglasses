@@ -1,8 +1,31 @@
 from ai_glasses_memory.models.memory import MemoryEventCreate
 from ai_glasses_memory.services.embedding import HashEmbeddingProvider
 from ai_glasses_memory.services.memory_store import MemoryStore
-from ai_glasses_memory.services.search import LightweightSemanticSearchProvider, VectorSearchProvider
-from ai_glasses_memory.services.vector_index import SQLiteVectorIndex
+from ai_glasses_memory.services.search import (
+    LightweightSemanticSearchProvider,
+    VectorSearchProvider,
+    create_search_provider,
+)
+from ai_glasses_memory.services.vector_index import SQLiteVectorIndex, VectorSearchResult
+
+
+class StaticEmbeddingProvider:
+    def embed_text(self, text: str) -> list[float]:
+        return [1.0]
+
+
+class StaticVectorIndex:
+    def __init__(self, results: list[VectorSearchResult]) -> None:
+        self.results = results
+
+    def search(self, query_vector: list[float], limit: int = 20) -> list[VectorSearchResult]:
+        return self.results[:limit]
+
+    def upsert(self, memory_id: int, vector: list[float], text: str) -> None:
+        return None
+
+    def clear(self) -> int:
+        return 0
 
 
 def test_lightweight_semantic_search_recalls_related_memory_without_exact_keyword(tmp_path):
@@ -167,3 +190,55 @@ def test_vector_search_provider_rebuilds_from_sqlite_after_clear_index(tmp_path)
     provider.rebuild_index()
 
     assert [item.id for item in provider.search("项目计划", limit=1)] == [event.id]
+
+
+def test_vector_search_provider_filters_results_below_minimum_score(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    weak_event = store.add_event(
+        MemoryEventCreate(
+            question="桌上有什么？",
+            answer="桌上有一个水杯。",
+            scene_summary="桌面上有水杯。",
+        )
+    )
+    provider = VectorSearchProvider(
+        store=store,
+        vector_index=StaticVectorIndex([VectorSearchResult(memory_id=weak_event.id, score=0.19)]),
+        embedding_provider=StaticEmbeddingProvider(),
+        min_score=0.2,
+    )
+
+    assert provider.search("鼠标") == []
+
+
+def test_vector_search_provider_filters_mock_memory_when_real_hits_exist(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    real_event = store.add_event(
+        MemoryEventCreate(
+            question="照片里面有什么？",
+            answer="照片里有两只无线鼠标。",
+            scene_summary="白色桌面上有黑色鼠标和银灰色鼠标。",
+            ocr_text="PaddleOCR：0",
+        )
+    )
+    mock_event = store.add_event(
+        MemoryEventCreate(
+            question="手里是什么？",
+            answer="模拟 VLM 回答：相关线索是模拟 OCR。",
+            scene_summary="模拟场景摘要：本次交互模拟了 AI 眼镜看到当前场景。",
+            ocr_text="模拟 OCR：画面中可能包含电脑屏幕、课程笔记和水杯。",
+        )
+    )
+    provider = VectorSearchProvider(
+        store=store,
+        vector_index=StaticVectorIndex(
+            [
+                VectorSearchResult(memory_id=mock_event.id, score=0.92),
+                VectorSearchResult(memory_id=real_event.id, score=0.85),
+            ]
+        ),
+        embedding_provider=StaticEmbeddingProvider(),
+        min_score=0.2,
+    )
+
+    assert [event.id for event in provider.search("鼠标")] == [real_event.id]

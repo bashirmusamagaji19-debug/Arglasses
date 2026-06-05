@@ -49,6 +49,13 @@ class HashEmbeddingProvider:
 
 class SentenceTransformersEmbeddingProvider:
     def __init__(self, model_name: str) -> None:
+        self.model_name = model_name
+        self._model = None
+
+    def _get_model(self):
+        if self._model is not None:
+            return self._model
+
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as exc:
@@ -56,10 +63,11 @@ class SentenceTransformersEmbeddingProvider:
                 "sentence-transformers is not installed. Install the embedding optional dependency first."
             ) from exc
 
-        self.model = SentenceTransformer(model_name)
+        self._model = SentenceTransformer(self.model_name)
+        return self._model
 
     def embed_text(self, text: str) -> list[float]:
-        vector = self.model.encode(text, normalize_embeddings=True)
+        vector = self._get_model().encode(text, normalize_embeddings=True)
         return [float(value) for value in vector.tolist()]
 
 

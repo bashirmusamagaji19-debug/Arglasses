@@ -23,6 +23,7 @@ ocr = [
 ]
 embedding = [
     "sentence-transformers>=3.0.0",
+    "torchvision==0.27.0",
 ]
 
 [tool.setuptools.packages.find]
