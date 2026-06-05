@@ -28,6 +28,13 @@ class LightweightSemanticSearchProvider:
             for event in candidates
         ]
         scored = [(score, event) for score, event in scored if score > 0]
+        real_scored = [
+            (score, event)
+            for score, event in scored
+            if not self._looks_like_mock_event(event)
+        ]
+        if real_scored:
+            scored = real_scored
         scored.sort(key=lambda item: (item[0], item[1].created_at, item[1].id), reverse=True)
         return [event for _, event in scored[:limit]]
 
@@ -61,6 +68,19 @@ class LightweightSemanticSearchProvider:
                 event.ocr_text,
             ]
         )
+
+    @classmethod
+    def _looks_like_mock_event(cls, event: MemoryEvent) -> bool:
+        text = cls._event_text(event)
+        mock_markers = [
+            "模拟 OCR",
+            "模拟 VLM",
+            "模拟场景摘要",
+            "mock OCR",
+            "mock VLM",
+            "mock scene",
+        ]
+        return any(marker.lower() in text.lower() for marker in mock_markers)
 
     @staticmethod
     def _keyword_hits(query: str, document: str) -> int:

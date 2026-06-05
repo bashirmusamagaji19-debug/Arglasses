@@ -84,6 +84,8 @@ with search_col:
         for item in search_results:
             st.markdown(f"**{item.created_at.strftime('%Y-%m-%d %H:%M:%S')}**")
             st.write(item.question)
+            st.markdown("**回答**")
+            st.write(item.answer)
             st.caption(item.scene_summary)
     st.subheader("记忆管理")
     keep_latest = st.number_input("只保留最近 N 条", min_value=1, max_value=500, value=50, step=1)
