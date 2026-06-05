@@ -119,3 +119,12 @@ def test_api_and_streamlit_wire_search_provider_factory():
 
     assert "create_search_provider" in api_file.read_text(encoding="utf-8")
     assert "create_search_provider" in ui_file.read_text(encoding="utf-8")
+
+
+def test_streamlit_ui_reports_search_and_embedding_provider():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "当前检索模式" in contents
+    assert "当前 Embedding 模式" in contents
+    assert "Hash embedding 只用于验证向量检索架构" in contents

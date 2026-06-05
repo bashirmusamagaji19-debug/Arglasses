@@ -51,6 +51,12 @@ st.info(f"当前 VLM 模式：{vlm_provider_name}")
 if vlm_provider_name == "openai_compatible":
     st.warning("真实 VLM 每次提交都会产生一次模型调用，请控制提交频率和图片大小。")
 
+search_provider_name = settings.search_provider.strip().lower()
+embedding_provider_name = settings.embedding_provider.strip().lower()
+st.info(f"当前检索模式：{search_provider_name}；当前 Embedding 模式：{embedding_provider_name}")
+if search_provider_name == "vector" and embedding_provider_name == "hash":
+    st.warning("Hash embedding 只用于验证向量检索架构，不是真正语义模型；需要更好效果请切换到 sentence_transformers。")
+
 pipeline = get_pipeline()
 
 left, right = st.columns([1, 1])

@@ -11,7 +11,8 @@
 
 ```powershell
 $env:AI_GLASSES_SEARCH_PROVIDER="vector"
-$env:AI_GLASSES_EMBEDDING_PROVIDER="hash"
+$env:AI_GLASSES_EMBEDDING_PROVIDER="sentence_transformers"
+$env:AI_GLASSES_EMBEDDING_MODEL="BAAI/bge-small-zh-v1.5"
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
@@ -20,20 +21,20 @@ $env:AI_GLASSES_EMBEDDING_PROVIDER="hash"
 ```text
 AI_GLASSES_SEARCH_PROVIDER=vector
 AI_GLASSES_VECTOR_DB_PATH=data/vector_memory.sqlite3
-AI_GLASSES_EMBEDDING_PROVIDER=hash
+AI_GLASSES_EMBEDDING_PROVIDER=sentence_transformers
 AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
-AI_GLASSES_EMBEDDING_DIMENSIONS=384
+AI_GLASSES_EMBEDDING_DIMENSIONS=512
 ```
 
 ## 当前实现
 
-第一版使用本地 hash embedding：
+推荐本地使用 `sentence_transformers` + `BAAI/bge-small-zh-v1.5`：
 
 ```text
 MemoryEvent
 -> question / answer / scene_summary / ocr_text
 -> embedding text
--> HashEmbeddingProvider
+-> SentenceTransformersEmbeddingProvider
 -> SQLiteVectorIndex
 ```
 
@@ -47,17 +48,15 @@ query
 -> 返回完整 MemoryEvent
 ```
 
-## 为什么先用 hash embedding
+## hash embedding 的定位
 
-hash embedding 不是真正的大模型 embedding，但它有几个工程优势：
+hash embedding 不是真正的大模型 embedding，检索效果会明显弱于 `bge-small-zh`。它只适合：
 
-- 无 API key。
-- 无调用费用。
-- 无新增运行时重依赖。
-- Streamlit Cloud 不会因为模型包变大而部署失败。
-- 可以先验证向量索引、SQLite 回表、记忆删除同步这些架构边界。
+- 自动化测试。
+- 云端 demo fallback。
+- 验证向量索引、SQLite 回表、记忆删除同步这些架构边界。
 
-后续可以切换到：
+如果要真实提升中文语义检索效果，应使用：
 
 ```text
 AI_GLASSES_EMBEDDING_PROVIDER=sentence_transformers
@@ -69,6 +68,8 @@ AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[embedding]"
 ```
+
+首次运行会下载模型。下载完成后模型会缓存在本机 Hugging Face cache 中。
 
 ## 和记忆管理的关系
 

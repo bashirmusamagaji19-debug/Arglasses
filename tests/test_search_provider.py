@@ -91,6 +91,31 @@ def test_lightweight_semantic_search_filters_mock_memory_when_real_hits_exist(tm
     assert [event.id for event in results] == [real_event.id]
 
 
+def test_lightweight_semantic_search_prioritizes_short_exact_query(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    mouse_event = store.add_event(
+        MemoryEventCreate(
+            question="我刚才看到了什么",
+            answer="黑色无线鼠标在桌上",
+            scene_summary="桌面上有黑色鼠标",
+            ocr_text="",
+        )
+    )
+    store.add_event(
+        MemoryEventCreate(
+            question="桌上有什么",
+            answer="透明水杯在桌上",
+            scene_summary="桌面上有水杯",
+            ocr_text="",
+        )
+    )
+
+    provider = LightweightSemanticSearchProvider(store)
+    results = provider.search("鼠标", limit=2)
+
+    assert results[0].id == mouse_event.id
+
+
 def test_vector_search_provider_finds_semantic_memory(tmp_path):
     store = MemoryStore(tmp_path / "memory.sqlite3")
     mouse_event = store.add_event(
