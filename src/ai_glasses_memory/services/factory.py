@@ -36,5 +36,7 @@ def create_pipeline(
             embedding_provider=resolved_settings.embedding_provider,
             embedding_model=resolved_settings.embedding_model,
             embedding_dimensions=resolved_settings.embedding_dimensions,
+            chroma_path=resolved_settings.chroma_path,
+            chroma_collection=resolved_settings.chroma_collection,
         ),
     )

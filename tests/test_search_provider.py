@@ -2,6 +2,7 @@ from ai_glasses_memory.models.memory import MemoryEventCreate
 from ai_glasses_memory.services.embedding import HashEmbeddingProvider
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.search import (
+    ChromaSearchProvider,
     LightweightSemanticSearchProvider,
     VectorSearchProvider,
     create_search_provider,
@@ -26,6 +27,39 @@ class StaticVectorIndex:
 
     def clear(self) -> int:
         return 0
+
+
+class FakeChromaCollection:
+    def __init__(self, query_result: dict | None = None) -> None:
+        self.query_result = query_result or {"ids": [[]], "distances": [[]]}
+        self.upserts = []
+        self.deletes = []
+
+    def upsert(self, ids, embeddings, documents, metadatas):
+        self.upserts.append(
+            {
+                "ids": ids,
+                "embeddings": embeddings,
+                "documents": documents,
+                "metadatas": metadatas,
+            }
+        )
+
+    def query(self, query_embeddings, n_results):
+        return self.query_result
+
+    def delete(self, ids=None, where=None):
+        self.deletes.append({"ids": ids, "where": where})
+
+
+class FakeChromaClient:
+    def __init__(self, collection: FakeChromaCollection) -> None:
+        self.collection = collection
+        self.collection_names = []
+
+    def get_or_create_collection(self, name: str):
+        self.collection_names.append(name)
+        return self.collection
 
 
 def test_lightweight_semantic_search_recalls_related_memory_without_exact_keyword(tmp_path):
@@ -242,3 +276,78 @@ def test_vector_search_provider_filters_mock_memory_when_real_hits_exist(tmp_pat
     )
 
     assert [event.id for event in provider.search("鼠标")] == [real_event.id]
+
+
+def test_chroma_search_provider_indexes_memory_event(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    event = store.add_event(
+        MemoryEventCreate(
+            question="照片里面有什么？",
+            answer="照片里有一只黑色无线鼠标。",
+            scene_summary="白色桌面上有黑色无线鼠标。",
+        )
+    )
+    collection = FakeChromaCollection()
+    provider = ChromaSearchProvider(
+        store=store,
+        chroma_path=tmp_path / "chroma",
+        collection_name="visual_memory",
+        embedding_provider=StaticEmbeddingProvider(),
+        client=FakeChromaClient(collection),
+    )
+
+    provider.index_event(event)
+
+    assert collection.upserts[0]["ids"] == [str(event.id)]
+    assert collection.upserts[0]["embeddings"] == [[1.0]]
+    assert collection.upserts[0]["metadatas"][0]["memory_id"] == event.id
+    assert "black" not in collection.upserts[0]["documents"][0]
+    assert "黑色无线鼠标" in collection.upserts[0]["documents"][0]
+
+
+def test_chroma_search_provider_returns_retrieved_memory_ids(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    event = store.add_event(
+        MemoryEventCreate(
+            question="照片里面有什么？",
+            answer="照片里有一只黑色无线鼠标。",
+            scene_summary="白色桌面上有黑色无线鼠标。",
+        )
+    )
+    collection = FakeChromaCollection(
+        query_result={"ids": [[str(event.id)]], "distances": [[0.1]]}
+    )
+    provider = ChromaSearchProvider(
+        store=store,
+        chroma_path=tmp_path / "chroma",
+        collection_name="visual_memory",
+        embedding_provider=StaticEmbeddingProvider(),
+        client=FakeChromaClient(collection),
+        min_score=0.2,
+    )
+
+    assert [item.id for item in provider.search("鼠标")] == [event.id]
+
+
+def test_chroma_search_provider_filters_low_similarity_results(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    event = store.add_event(
+        MemoryEventCreate(
+            question="桌上有什么？",
+            answer="桌上有一个水杯。",
+            scene_summary="桌面上有水杯。",
+        )
+    )
+    collection = FakeChromaCollection(
+        query_result={"ids": [[str(event.id)]], "distances": [[0.95]]}
+    )
+    provider = ChromaSearchProvider(
+        store=store,
+        chroma_path=tmp_path / "chroma",
+        collection_name="visual_memory",
+        embedding_provider=StaticEmbeddingProvider(),
+        client=FakeChromaClient(collection),
+        min_score=0.2,
+    )
+
+    assert provider.search("鼠标") == []

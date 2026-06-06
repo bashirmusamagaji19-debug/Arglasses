@@ -78,6 +78,17 @@ with search_col:
             st.markdown("**回答**")
             st.write(item.answer)
             st.caption(item.scene_summary)
+    st.subheader("历史记忆问答")
+    rag_question = st.text_input("基于历史记忆提问", value="")
+    rag_limit = st.number_input("RAG 召回条数", min_value=1, max_value=10, value=3, step=1)
+    if st.button("基于记忆回答", disabled=not rag_question.strip()):
+        rag_result = pipeline.answer_from_memory(rag_question.strip(), limit=int(rag_limit))
+        st.markdown("**RAG 回答**")
+        st.write(rag_result.answer)
+        if rag_result.context_memories:
+            st.markdown("**使用的历史记忆**")
+            for memory in rag_result.context_memories:
+                st.caption(f"{memory.created_at.strftime('%Y-%m-%d %H:%M:%S')} - {memory.question}")
     st.subheader("记忆管理")
     keep_latest = st.number_input("只保留最近 N 条", min_value=1, max_value=500, value=50, step=1)
     if st.button("裁剪记忆"):

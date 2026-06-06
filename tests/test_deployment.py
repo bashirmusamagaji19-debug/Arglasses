@@ -108,6 +108,8 @@ def test_env_example_documents_vector_search_settings():
 
     assert "AI_GLASSES_SEARCH_PROVIDER=lightweight" in contents
     assert "AI_GLASSES_VECTOR_DB_PATH=data/vector_memory.sqlite3" in contents
+    assert "AI_GLASSES_CHROMA_PATH=data/chroma" in contents
+    assert "AI_GLASSES_CHROMA_COLLECTION=visual_memory" in contents
     assert "AI_GLASSES_EMBEDDING_PROVIDER=hash" in contents
     assert "AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5" in contents
     assert "AI_GLASSES_EMBEDDING_DIMENSIONS=384" in contents
@@ -119,6 +121,13 @@ def test_embedding_extra_includes_torchvision_for_transformers_image_processors(
 
     assert '"sentence-transformers>=' in contents
     assert '"torchvision==0.27.0"' in contents
+
+
+def test_rag_extra_documents_chroma_dependency():
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    contents = pyproject.read_text(encoding="utf-8")
+
+    assert '"chromadb>=' in contents
 
 
 def test_api_and_streamlit_wire_search_provider_factory():
@@ -138,3 +147,13 @@ def test_streamlit_ui_reports_search_and_embedding_provider():
     assert "当前检索模式" in contents
     assert "当前 Embedding 模式" in contents
     assert "Hash embedding 只用于验证向量检索架构" in contents
+
+
+def test_streamlit_ui_exposes_rag_memory_answer_controls():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "历史记忆问答" in contents
+    assert "基于记忆回答" in contents
+    assert "answer_from_memory" in contents
+    assert "RAG 回答" in contents

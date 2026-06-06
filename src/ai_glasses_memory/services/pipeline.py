@@ -5,6 +5,7 @@ from ai_glasses_memory.services.latency import LatencyTracker
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.mock_ai import MockAIService
 from ai_glasses_memory.services.ocr import OCRProvider
+from ai_glasses_memory.services.rag import RAGAnswer, RAGAnswerProvider, RuleBasedRAGAnswerProvider
 from ai_glasses_memory.services.search import LightweightSemanticSearchProvider, SearchProvider
 from ai_glasses_memory.services.summary import RuleBasedSummaryProvider, SummaryProvider
 from ai_glasses_memory.services.vlm import MockVLMProvider, VLMProvider
@@ -21,6 +22,7 @@ class MemoryPipeline:
         vlm_provider: VLMProvider | None = None,
         summary_provider: SummaryProvider | None = None,
         search_provider: SearchProvider | None = None,
+        rag_answer_provider: RAGAnswerProvider | None = None,
     ) -> None:
         self.store = store
         self.ai_service = ai_service or MockAIService()
@@ -28,6 +30,7 @@ class MemoryPipeline:
         self.vlm_provider = vlm_provider or MockVLMProvider()
         self.summary_provider = summary_provider or RuleBasedSummaryProvider()
         self.search_provider = search_provider or LightweightSemanticSearchProvider(store)
+        self.rag_answer_provider = rag_answer_provider or RuleBasedRAGAnswerProvider()
 
     def ask(self, question: str, image_path: str | None = None) -> MemoryEvent:
         tracker = LatencyTracker()
@@ -63,6 +66,11 @@ class MemoryPipeline:
 
     def search_memories(self, keyword: str, limit: int = 20) -> list[MemoryEvent]:
         return self.search_provider.search(query=keyword, limit=limit)
+
+    def answer_from_memory(self, question: str, limit: int = 3) -> RAGAnswer:
+        contexts = self.search_memories(question, limit=limit)
+        answer = self.rag_answer_provider.answer(question, contexts)
+        return RAGAnswer(answer=answer, context_memories=contexts)
 
     def delete_memory(self, memory_id: int) -> int:
         deleted = self.store.delete_event(memory_id)

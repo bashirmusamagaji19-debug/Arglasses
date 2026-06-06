@@ -209,6 +209,120 @@ class VectorSearchProvider:
         )
 
 
+class ChromaSearchProvider:
+    def __init__(
+        self,
+        store: MemoryStore,
+        chroma_path: str | Path,
+        collection_name: str,
+        embedding_provider: EmbeddingProvider,
+        fallback_provider: SearchProvider | None = None,
+        client=None,
+        min_score: float = 0.2,
+    ) -> None:
+        self.store = store
+        self.chroma_path = Path(chroma_path)
+        self.collection_name = collection_name
+        self.embedding_provider = embedding_provider
+        self.fallback_provider = fallback_provider or LightweightSemanticSearchProvider(store)
+        self.client = client
+        self.min_score = min_score
+        self._collection = None
+
+    def search(self, query: str, limit: int = 20) -> list[MemoryEvent]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            return []
+
+        result = self._get_collection().query(
+            query_embeddings=[self.embedding_provider.embed_text(normalized_query)],
+            n_results=limit,
+        )
+        ids = self._first_result_list(result, "ids")
+        distances = self._first_result_list(result, "distances")
+        if not ids:
+            return self.fallback_provider.search(query=query, limit=limit)
+
+        scored_ids: list[int] = []
+        for index, raw_id in enumerate(ids):
+            score = self._score_from_distance(distances[index] if index < len(distances) else None)
+            if score < self.min_score:
+                continue
+            try:
+                scored_ids.append(int(raw_id))
+            except (TypeError, ValueError):
+                continue
+
+        if not scored_ids:
+            return []
+
+        events_by_id = {event.id: event for event in self.store.list_events(limit=10000)}
+        events = [events_by_id[memory_id] for memory_id in scored_ids if memory_id in events_by_id]
+        real_events = [
+            event
+            for event in events
+            if not LightweightSemanticSearchProvider._looks_like_mock_event(event)
+        ]
+        if real_events:
+            events = real_events
+        if events:
+            return events
+        return self.fallback_provider.search(query=query, limit=limit)
+
+    def index_event(self, event: MemoryEvent) -> None:
+        text = VectorSearchProvider._embedding_text(event)
+        self._get_collection().upsert(
+            ids=[str(event.id)],
+            embeddings=[self.embedding_provider.embed_text(text)],
+            documents=[text],
+            metadatas=[
+                {
+                    "memory_id": event.id,
+                    "created_at": event.created_at.isoformat(),
+                }
+            ],
+        )
+
+    def rebuild_index(self) -> None:
+        collection = self._get_collection()
+        collection.delete(where={"memory_id": {"$gte": 0}})
+        for event in reversed(self.store.list_events(limit=10000)):
+            self.index_event(event)
+
+    def _get_collection(self):
+        if self._collection is not None:
+            return self._collection
+
+        if self.client is None:
+            try:
+                import chromadb
+            except ImportError as exc:
+                raise RuntimeError(
+                    "chromadb is not installed. Install the rag optional dependency first."
+                ) from exc
+            self.chroma_path.mkdir(parents=True, exist_ok=True)
+            self.client = chromadb.PersistentClient(path=str(self.chroma_path))
+
+        self._collection = self.client.get_or_create_collection(name=self.collection_name)
+        return self._collection
+
+    @staticmethod
+    def _first_result_list(result: dict, key: str) -> list:
+        values = result.get(key) or []
+        if not values:
+            return []
+        return list(values[0] or [])
+
+    @staticmethod
+    def _score_from_distance(distance) -> float:
+        if distance is None:
+            return 1.0
+        try:
+            return 1.0 - float(distance)
+        except (TypeError, ValueError):
+            return 0.0
+
+
 def create_search_provider(
     provider: str,
     *,
@@ -217,6 +331,8 @@ def create_search_provider(
     embedding_provider: str,
     embedding_model: str,
     embedding_dimensions: int,
+    chroma_path: str | Path = Path("data/chroma"),
+    chroma_collection: str = "visual_memory",
 ) -> SearchProvider:
     normalized = provider.strip().lower()
     if normalized in {"", "lightweight", "mock"}:
@@ -232,4 +348,15 @@ def create_search_provider(
             ),
         )
         return vector_provider
+    if normalized == "chroma":
+        return ChromaSearchProvider(
+            store=store,
+            chroma_path=chroma_path,
+            collection_name=chroma_collection,
+            embedding_provider=create_embedding_provider(
+                embedding_provider,
+                model_name=embedding_model,
+                dimensions=embedding_dimensions,
+            ),
+        )
     raise ValueError(f"Unsupported search provider: {provider}")

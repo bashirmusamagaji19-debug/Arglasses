@@ -36,6 +36,35 @@ def test_api_ask_lists_and_searches_memories(tmp_path):
     app.dependency_overrides.clear()
 
 
+def test_api_answers_from_retrieved_memories(tmp_path):
+    store = MemoryStore(tmp_path / "rag.sqlite3")
+    store.add_event(
+        MemoryEventCreate(
+            question="照片里面有什么？",
+            answer="照片里有一只黑色无线鼠标。",
+            scene_summary="白色桌面上有黑色无线鼠标。",
+        )
+    )
+
+    def override_pipeline() -> MemoryPipeline:
+        return MemoryPipeline(store)
+
+    app.dependency_overrides[get_pipeline] = override_pipeline
+    client = TestClient(app)
+
+    response = client.post(
+        "/memories/rag-answer",
+        json={"question": "我刚才看到的鼠标是什么颜色？", "limit": 3},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "黑色无线鼠标" in payload["answer"]
+    assert len(payload["context_memories"]) == 1
+
+    app.dependency_overrides.clear()
+
+
 def test_health_endpoint_reports_service_status():
     client = TestClient(app)
 

@@ -18,6 +18,8 @@ class Settings:
     vlm_max_image_width: int = 1024
     search_provider: str = "lightweight"
     vector_db_path: Path = Path("data/vector_memory.sqlite3")
+    chroma_path: Path = Path("data/chroma")
+    chroma_collection: str = "visual_memory"
     embedding_provider: str = "hash"
     embedding_model: str = "BAAI/bge-small-zh-v1.5"
     embedding_dimensions: int = 384
@@ -57,6 +59,8 @@ def get_settings(env_file: Path | str | None = Path(".env")) -> Settings:
         vlm_max_image_width=int(os.getenv("AI_GLASSES_VLM_MAX_IMAGE_WIDTH", "1024")),
         search_provider=os.getenv("AI_GLASSES_SEARCH_PROVIDER", "lightweight"),
         vector_db_path=Path(os.getenv("AI_GLASSES_VECTOR_DB_PATH", "data/vector_memory.sqlite3")),
+        chroma_path=Path(os.getenv("AI_GLASSES_CHROMA_PATH", "data/chroma")),
+        chroma_collection=os.getenv("AI_GLASSES_CHROMA_COLLECTION", "visual_memory"),
         embedding_provider=os.getenv("AI_GLASSES_EMBEDDING_PROVIDER", "hash"),
         embedding_model=os.getenv("AI_GLASSES_EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5"),
         embedding_dimensions=int(os.getenv("AI_GLASSES_EMBEDDING_DIMENSIONS", "384")),

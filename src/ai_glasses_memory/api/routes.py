@@ -23,6 +23,16 @@ class MutationResult(BaseModel):
     deleted: int
 
 
+class RAGAnswerRequest(BaseModel):
+    question: str
+    limit: int = 3
+
+
+class RAGAnswerResponse(BaseModel):
+    answer: str
+    context_memories: list[MemoryEvent]
+
+
 def get_pipeline() -> MemoryPipeline:
     return create_pipeline()
 
@@ -173,3 +183,12 @@ def search_memories(
     limit: int = 20,
 ) -> list[MemoryEvent]:
     return pipeline.search_memories(keyword=q, limit=limit)
+
+
+@router.post("/memories/rag-answer", response_model=RAGAnswerResponse)
+def answer_from_memories(
+    request: RAGAnswerRequest,
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+) -> RAGAnswerResponse:
+    result = pipeline.answer_from_memory(question=request.question, limit=request.limit)
+    return RAGAnswerResponse(answer=result.answer, context_memories=result.context_memories)
