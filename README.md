@@ -14,6 +14,7 @@
 - 支持基于关键词的历史搜索。
 - 记录 OCR、VLM、摘要和总耗时。
 - 支持麦克风录音语音提问：录音后由 ASR provider 转写成问题文本，默认使用 faster-whisper，文件上传作为 fallback。
+- 支持浏览器原生 `/live` 输入页：实时摄像头预览、录音转写、提问时截取当前视频帧。
 - 支持 Chroma RAG 历史记忆问答。
 
 当前阶段不追求真实 AI 能力，重点是先有一个能上线、能打开、能演示的作品集入口。
@@ -64,6 +65,12 @@ python -m pytest -q
 python -m uvicorn ai_glasses_memory.main:app --reload
 ```
 
+打开浏览器原生 Live 输入页：
+
+```text
+http://127.0.0.1:8000/live
+```
+
 启动 Web UI：
 
 ```powershell
@@ -100,7 +107,9 @@ Render 也可直接使用 `render.yaml`。详细步骤见 [docs/deployment.md](d
 
 如果手机摄像头权限不可用，可以使用备用的图片上传入口。
 
-也可以使用独立手机输入页。启动 FastAPI 后，手机打开 `http://电脑局域网IP:8000/mobile`，用原生浏览器拍照上传。详细说明见 [docs/mobile-input.md](docs/mobile-input.md)。
+更接近最终交互形态的是 `/live` 页面。启动 FastAPI 后，手机打开 `http://电脑局域网IP:8000/live`，可以实时预览摄像头、录音转写，并在提问时自动截取当前视频帧。详细说明见 [docs/live-input.md](docs/live-input.md)。
+
+旧的 `/mobile` 页面仍保留为拍照上传 fallback，说明见 [docs/mobile-input.md](docs/mobile-input.md)。
 
 ## PaddleOCR
 
@@ -151,12 +160,16 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 | 记忆时间线 | 自动保存每次交互记录，按时间倒序展示 |
 | 历史检索 / RAG | 默认使用 Chroma 召回历史记忆，并支持基于历史记忆的问答 |
 | 语音提问 | 麦克风录音后转写，默认 faster-whisper，也可切换到 mock ASR 做低依赖 fallback |
+| Live 输入 | `/live` 实时摄像头预览 + 录音转写 + 当前帧提问 |
 
 ## API
 
 启动 FastAPI 后可使用：
 
 - `GET /health`
+- `GET /live`
+- `POST /live/ask`
+- `POST /live/transcribe`
 - `POST /ask`
 - `POST /transcribe`
 - `GET /memories`
@@ -183,7 +196,7 @@ docs/                                 # 架构、部署和学习文档
 
 ## 后续演进
 
-- 手机摄像头：当前已支持拍照上传；后续再做抽帧和自动提交。
+- 手机摄像头：当前已支持 `/live` 实时预览和提问时截帧；后续再做自动抽帧和场景变化触发。
 - 真实 OCR：PaddleOCR 或 EasyOCR。
 - 真实 VLM：多模态模型。
 - 检索：默认使用轻量语义检索；本地可切换到向量检索，后续可升级到 Chroma 或 FAISS。

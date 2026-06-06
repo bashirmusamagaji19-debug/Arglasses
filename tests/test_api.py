@@ -86,6 +86,22 @@ def test_mobile_page_exposes_camera_capture_form():
     assert 'action="/mobile/ask"' in response.text
 
 
+def test_live_page_exposes_browser_native_camera_and_audio_controls():
+    client = TestClient(app)
+
+    response = client.get("/live")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "navigator.mediaDevices.getUserMedia" in response.text
+    assert "MediaRecorder" in response.text
+    assert "captureFrame" in response.text
+    assert 'fetch("/live/ask"' in response.text
+    assert 'fetch("/live/transcribe"' in response.text
+    assert "<video" in response.text
+    assert "<canvas" in response.text
+
+
 def test_mobile_ask_accepts_image_upload_and_returns_memory(tmp_path):
     def override_pipeline() -> MemoryPipeline:
         return MemoryPipeline(MemoryStore(tmp_path / "mobile.sqlite3"))
@@ -102,6 +118,28 @@ def test_mobile_ask_accepts_image_upload_and_returns_memory(tmp_path):
     assert response.status_code == 200
     payload = response.json()
     assert payload["question"] == "手上是什么？"
+    assert payload["image_path"]
+    assert Path(payload["image_path"]).exists()
+
+    app.dependency_overrides.clear()
+
+
+def test_live_ask_accepts_current_frame_upload_and_returns_memory(tmp_path):
+    def override_pipeline() -> MemoryPipeline:
+        return MemoryPipeline(MemoryStore(tmp_path / "live.sqlite3"))
+
+    app.dependency_overrides[get_pipeline] = override_pipeline
+    client = TestClient(app)
+
+    response = client.post(
+        "/live/ask",
+        data={"question": "我现在看到什么？"},
+        files={"image": ("frame.jpg", b"fake frame bytes", "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["question"] == "我现在看到什么？"
     assert payload["image_path"]
     assert Path(payload["image_path"]).exists()
 
@@ -126,6 +164,27 @@ def test_api_transcribes_audio_upload(tmp_path):
     assert payload["audio_path"]
     assert Path(payload["audio_path"]).exists()
     assert payload["latency_ms"]["asr"] >= 0
+
+    app.dependency_overrides.clear()
+
+
+def test_live_transcribe_accepts_recorded_audio(tmp_path):
+    def override_pipeline() -> MemoryPipeline:
+        return MemoryPipeline(MemoryStore(tmp_path / "live-asr.sqlite3"))
+
+    app.dependency_overrides[get_pipeline] = override_pipeline
+    client = TestClient(app)
+
+    response = client.post(
+        "/live/transcribe",
+        files={"audio": ("voice.webm", b"fake recorded audio", "audio/webm")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["text"] == "我刚才看到了什么？"
+    assert payload["audio_path"]
+    assert Path(payload["audio_path"]).exists()
 
     app.dependency_overrides.clear()
 

@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG + 麦克风语音提问”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
+当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG + 浏览器原生 Live 输入”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
 
 ```text
 鼠标是什么颜色的？
@@ -14,9 +14,9 @@
 
 ```mermaid
 flowchart LR
-    A["手机拍照 / 图片上传"] --> B["MemoryPipeline"]
+    A["/live 实时预览截帧 / 图片上传"] --> B["MemoryPipeline"]
     C["用户问题"] --> B
-    T["麦克风录音 / 音频上传"] --> U["ASR Provider"]
+    T["/live 录音 / 音频上传"] --> U["ASR Provider"]
     U --> C
     B --> D["OCR Provider"]
     B --> E["VLM Provider"]
@@ -48,8 +48,8 @@ flowchart LR
 - `services/search.py`：历史检索 provider，当前默认 `ChromaSearchProvider`，也保留 lightweight / SQLite vector provider。
 - `services/rag.py`：RAG 回答生成层，把召回记忆转成用户可读答案。
 - `services/pipeline.py`：串联 ASR 转写、视觉问答、记忆写入、检索和 RAG 问答。
-- `api/routes.py`：提供 FastAPI 接口，包括 `/ask`、`/transcribe`、`/memories/search`、`/memories/rag-answer`。
-- `ui/streamlit_app.py`：提供 Web demo，包括图片输入、语音提问、记忆时间线、历史检索、历史记忆问答。
+- `api/routes.py`：提供 FastAPI 接口，包括 `/live`、`/live/ask`、`/live/transcribe`、`/ask`、`/transcribe`、`/memories/search`、`/memories/rag-answer`。
+- `ui/streamlit_app.py`：提供 dashboard / fallback demo，包括图片输入、语音提问、记忆时间线、历史检索、历史记忆问答。
 
 ## 存储设计
 
