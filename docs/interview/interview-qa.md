@@ -17,7 +17,9 @@
 -> UI 展示当前回答、OCR、摘要、时间线和历史问答
 ```
 
-这条 pipeline 的核心价值是模块边界清楚：OCR、VLM、Embedding、Search、RAG Answer 都可以替换，不需要重写 UI 或 API。
+语音提问会先经过 ASR provider 转写成文本，再进入同一条视觉问答 pipeline。
+
+这条 pipeline 的核心价值是模块边界清楚：ASR、OCR、VLM、Embedding、Search、RAG Answer 都可以替换，不需要重写 UI 或 API。
 
 ## 3. 为什么用 SQLite 保存 memory event？
 
@@ -71,7 +73,7 @@ PaddleOCR 是重依赖，Windows CPU 环境下 PaddleOCR、PaddlePaddle、numpy�
 
 ## 10. 当前项目的主要限制是什么？
 
-- 语音输入 ASR 还没有接入。
+- 当前 ASR 是非流式音频上传版，还没有做实时麦克风和流式转写。
 - 当前 RAG answer provider 仍偏规则型，不是生产级 LLM 生成器。
 - 真实 VLM 依赖外部 OpenAI-compatible API 或自部署服务。
 - Chroma 默认可以跑通 RAG 架构，但中文语义效果取决于 embedding provider。
@@ -81,7 +83,7 @@ PaddleOCR 是重依赖，Windows CPU 环境下 PaddleOCR、PaddlePaddle、numpy�
 
 按原计划，后续优先级是：
 
-1. 接入 ASR，让用户可以语音提问。
+1. 把非流式 ASR 升级为实时麦克风或流式转写。
 2. 做隐私模式和延迟面板，体现 AI 眼镜工程意识。
 3. 接硬件端 HTTP 上传原型，让 RK3588 或手机端复用同一 pipeline。
 4. 把 RAG answer provider 升级为可选 LLM provider，提高历史问答自然度。
@@ -91,5 +93,5 @@ PaddleOCR 是重依赖，Windows CPU 环境下 PaddleOCR、PaddlePaddle、numpy�
 我主要做了三件事：
 
 1. 把视觉问答从一次性 demo 设计成可积累的 memory event pipeline。
-2. 把 OCR、VLM、Embedding、Search 和 RAG Answer 都做成 provider 边界，降低真实模型和部署依赖风险。
+2. 把 ASR、OCR、VLM、Embedding、Search 和 RAG Answer 都做成 provider 边界，降低真实模型和部署依赖风险。
 3. 把历史检索升级成 Chroma RAG，让系统能基于过去看到的内容回答用户追问，并保留证据记忆方便解释。

@@ -5,7 +5,7 @@ import streamlit as st
 from ai_glasses_memory.config import get_settings
 from ai_glasses_memory.services.factory import create_pipeline
 from ai_glasses_memory.services.pipeline import MemoryPipeline
-from ai_glasses_memory.services.uploads import save_input_image
+from ai_glasses_memory.services.uploads import save_input_audio, save_input_image
 
 
 def get_pipeline() -> MemoryPipeline:
@@ -25,6 +25,10 @@ vlm_provider_name = settings.vlm_provider.strip().lower()
 st.info(f"当前 VLM 模式：{vlm_provider_name}")
 if vlm_provider_name == "openai_compatible":
     st.warning("真实 VLM 每次提交都会产生一次模型调用，请控制提交频率和图片大小。")
+asr_provider_name = settings.asr_provider.strip().lower()
+st.info(f"当前 ASR 模式：{asr_provider_name}")
+if asr_provider_name == "faster_whisper":
+    st.warning("faster-whisper 首次转写会加载模型；建议先用短音频验证延迟。")
 
 search_provider_name = settings.search_provider.strip().lower()
 embedding_provider_name = settings.embedding_provider.strip().lower()
@@ -43,7 +47,20 @@ with left:
     selected_image = camera_image or uploaded_file
     if selected_image is not None:
         st.image(selected_image, caption="当前画面", width="stretch")
-    question = st.text_input("输入问题", value="我刚才看到了什么？")
+    st.subheader("语音提问")
+    audio_file = st.file_uploader("上传语音问题", type=["wav", "mp3", "m4a", "ogg"], key="voice-question")
+    if st.button("转写语音", disabled=audio_file is None):
+        audio_path = save_input_audio(audio_file)
+        transcription = pipeline.transcribe_audio(audio_path or "")
+        st.session_state["transcribed_question"] = transcription.text
+        st.session_state["asr_latency_ms"] = transcription.latency_ms
+    if "asr_latency_ms" in st.session_state:
+        st.markdown("**ASR 延迟统计（ms）**")
+        st.json(st.session_state["asr_latency_ms"])
+    question = st.text_input(
+        "输入问题",
+        value=st.session_state.get("transcribed_question", "我刚才看到了什么？"),
+    )
     submitted = st.button("提交问题", type="primary")
 
 with right:

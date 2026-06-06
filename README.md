@@ -13,6 +13,8 @@
 - 在 Streamlit UI 展示记忆时间线。
 - 支持基于关键词的历史搜索。
 - 记录 OCR、VLM、摘要和总耗时。
+- 支持非流式语音提问入口：上传音频后由 ASR provider 转写成问题文本，默认 mock，可选 faster-whisper。
+- 支持 Chroma RAG 历史记忆问答。
 
 当前阶段不追求真实 AI 能力，重点是先有一个能上线、能打开、能演示的作品集入口。
 
@@ -31,6 +33,7 @@
 - FastAPI
 - Streamlit
 - SQLite
+- Chroma
 - pytest
 
 ## 本地运行
@@ -115,6 +118,27 @@ $env:AI_GLASSES_OCR_PROVIDER="paddleocr"
 
 详细说明见 [docs/phase3-paddleocr.md](docs/phase3-paddleocr.md)。
 
+## ASR 语音提问
+
+阶段 4 已加入非流式 ASR provider。默认仍使用 mock，不需要安装额外模型：
+
+```text
+AI_GLASSES_ASR_PROVIDER=mock
+```
+
+本地启用 faster-whisper：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[asr]"
+$env:AI_GLASSES_ASR_PROVIDER="faster_whisper"
+$env:AI_GLASSES_ASR_MODEL="base"
+$env:AI_GLASSES_ASR_DEVICE="cpu"
+$env:AI_GLASSES_ASR_COMPUTE_TYPE="int8"
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+Streamlit 的“语音提问”区域可以上传 `.wav`、`.mp3`、`.m4a` 或 `.ogg` 音频，系统会先转写成问题文本，再由用户提交到视觉记忆 pipeline。当前暂不做实时麦克风流和 WebRTC，详细说明见 [docs/phase4-asr.md](docs/phase4-asr.md)。
+
 ## 在线 Demo
 
 👉 **[点此打开在线 Demo]()** ← *部署后填入 Streamlit Cloud 或 Render 的实际 URL*
@@ -126,7 +150,8 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 | 图片上传 + 提问 | 上传一张图片，输入问题（如"我刚才看到了什么？"） |
 | 模拟回答与场景摘要 | 系统生成模拟 OCR 文本、VLM 回答和场景摘要 |
 | 记忆时间线 | 自动保存每次交互记录，按时间倒序展示 |
-| 历史检索 | 默认使用轻量语义检索，也可切换到本地向量检索 |
+| 历史检索 / RAG | 默认使用 Chroma 召回历史记忆，并支持基于历史记忆的问答 |
+| 语音提问 | 默认 mock ASR，本地可切换到 faster-whisper 转写音频问题 |
 
 ## API
 
@@ -134,6 +159,7 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 
 - `GET /health`
 - `POST /ask`
+- `POST /transcribe`
 - `GET /memories`
 - `GET /memories/search?q=关键词`
 - `DELETE /memories/{memory_id}`
@@ -162,7 +188,7 @@ docs/                                 # 架构、部署和学习文档
 - 真实 OCR：PaddleOCR 或 EasyOCR。
 - 真实 VLM：多模态模型。
 - 检索：默认使用轻量语义检索；本地可切换到向量检索，后续可升级到 Chroma 或 FAISS。
-- 语音输入：faster-whisper ASR。
+- 语音输入：当前已支持非流式音频上传转写；后续再做实时麦克风和流式 ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
 
 当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。

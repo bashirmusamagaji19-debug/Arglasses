@@ -108,6 +108,28 @@ def test_mobile_ask_accepts_image_upload_and_returns_memory(tmp_path):
     app.dependency_overrides.clear()
 
 
+def test_api_transcribes_audio_upload(tmp_path):
+    def override_pipeline() -> MemoryPipeline:
+        return MemoryPipeline(MemoryStore(tmp_path / "asr.sqlite3"))
+
+    app.dependency_overrides[get_pipeline] = override_pipeline
+    client = TestClient(app)
+
+    response = client.post(
+        "/transcribe",
+        files={"audio": ("question.wav", b"fake audio bytes", "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["text"] == "我刚才看到了什么？"
+    assert payload["audio_path"]
+    assert Path(payload["audio_path"]).exists()
+    assert payload["latency_ms"]["asr"] >= 0
+
+    app.dependency_overrides.clear()
+
+
 def test_api_can_delete_clear_prune_and_dedupe_memories(tmp_path):
     store = MemoryStore(tmp_path / "manage.sqlite3")
 

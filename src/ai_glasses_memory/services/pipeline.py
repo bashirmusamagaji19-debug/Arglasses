@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ai_glasses_memory.models.memory import MemoryEvent, MemoryEventCreate
+from ai_glasses_memory.services.asr import ASRProvider, ASRResult, MockASRProvider
 from ai_glasses_memory.services.latency import LatencyTracker
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.mock_ai import MockAIService
@@ -21,6 +22,7 @@ class MemoryPipeline:
         ocr_provider: OCRProvider | None = None,
         vlm_provider: VLMProvider | None = None,
         summary_provider: SummaryProvider | None = None,
+        asr_provider: ASRProvider | None = None,
         search_provider: SearchProvider | None = None,
         rag_answer_provider: RAGAnswerProvider | None = None,
     ) -> None:
@@ -29,6 +31,7 @@ class MemoryPipeline:
         self.ocr_provider = ocr_provider
         self.vlm_provider = vlm_provider or MockVLMProvider()
         self.summary_provider = summary_provider or RuleBasedSummaryProvider()
+        self.asr_provider = asr_provider or MockASRProvider()
         self.search_provider = search_provider or LightweightSemanticSearchProvider(store)
         self.rag_answer_provider = rag_answer_provider or RuleBasedRAGAnswerProvider()
 
@@ -71,6 +74,12 @@ class MemoryPipeline:
         contexts = self.search_memories(question, limit=limit)
         answer = self.rag_answer_provider.answer(question, contexts)
         return RAGAnswer(answer=answer, context_memories=contexts)
+
+    def transcribe_audio(self, audio_path: str) -> ASRResult:
+        tracker = LatencyTracker()
+        text = self.asr_provider.transcribe(audio_path)
+        tracker.mark("asr")
+        return ASRResult(text=text, audio_path=audio_path, latency_ms=tracker.finish())
 
     def delete_memory(self, memory_id: int) -> int:
         deleted = self.store.delete_event(memory_id)

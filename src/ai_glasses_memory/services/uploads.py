@@ -21,6 +21,13 @@ class FastAPIUploadFile(Protocol):
     file: object
 
 
+class UploadedAudio(Protocol):
+    name: str
+
+    def getbuffer(self) -> memoryview:
+        ...
+
+
 def save_input_image(
     uploaded_file: UploadedImage | None,
     upload_dir: str | Path = "data/uploads",
@@ -41,6 +48,23 @@ def save_input_image(
 
     target = target_dir / filename
     target.write_bytes(saved_bytes)
+    return str(target)
+
+
+def save_input_audio(
+    uploaded_file: UploadedAudio | None,
+    upload_dir: str | Path = "data/uploads",
+) -> str | None:
+    if uploaded_file is None:
+        return None
+
+    target_dir = Path(upload_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = Path(getattr(uploaded_file, "name", None) or getattr(uploaded_file, "filename", "")).name
+    filename = filename or "voice_question.wav"
+    target = target_dir / filename
+    target.write_bytes(_read_upload_bytes(uploaded_file))
     return str(target)
 
 

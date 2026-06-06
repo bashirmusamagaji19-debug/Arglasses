@@ -21,6 +21,11 @@ class StaticSummaryProvider:
         return f"真实摘要：{question} / {answer} / {ocr_text}"
 
 
+class StaticASRProvider:
+    def transcribe(self, audio_path: str) -> str:
+        return f"转写文本：{audio_path}"
+
+
 class StaticSearchProvider:
     def search(self, query: str, limit: int = 20):
         return [f"search:{query}:{limit}"]
@@ -107,6 +112,17 @@ def test_pipeline_uses_injected_summary_provider(tmp_path):
 
     assert result.scene_summary.startswith("真实摘要：屏幕上有什么？")
     assert "模拟场景摘要" not in result.scene_summary
+
+
+def test_pipeline_transcribes_audio_with_latency(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    pipeline = MemoryPipeline(store, asr_provider=StaticASRProvider())
+
+    result = pipeline.transcribe_audio("question.wav")
+
+    assert result.text == "转写文本：question.wav"
+    assert result.latency_ms["asr"] >= 0
+    assert result.latency_ms["total"] >= result.latency_ms["asr"]
 
 
 def test_pipeline_uses_injected_search_provider(tmp_path):

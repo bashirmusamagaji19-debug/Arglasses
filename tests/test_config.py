@@ -139,3 +139,32 @@ def test_settings_include_chroma_vector_store_options(tmp_path, monkeypatch):
     assert settings.search_provider == "chroma"
     assert settings.chroma_path.as_posix() == "data/chroma"
     assert settings.chroma_collection == "visual_memory"
+
+
+def test_settings_include_asr_options(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "AI_GLASSES_ASR_PROVIDER=faster_whisper",
+                "AI_GLASSES_ASR_MODEL=small",
+                "AI_GLASSES_ASR_DEVICE=cpu",
+                "AI_GLASSES_ASR_COMPUTE_TYPE=int8",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    for name in [
+        "AI_GLASSES_ASR_PROVIDER",
+        "AI_GLASSES_ASR_MODEL",
+        "AI_GLASSES_ASR_DEVICE",
+        "AI_GLASSES_ASR_COMPUTE_TYPE",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings(env_file)
+
+    assert settings.asr_provider == "faster_whisper"
+    assert settings.asr_model == "small"
+    assert settings.asr_device == "cpu"
+    assert settings.asr_compute_type == "int8"

@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
+当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG + 非流式语音提问”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
 
 ```text
 鼠标是什么颜色的？
@@ -16,6 +16,8 @@
 flowchart LR
     A["手机拍照 / 图片上传"] --> B["MemoryPipeline"]
     C["用户问题"] --> B
+    T["音频上传"] --> U["ASR Provider"]
+    U --> C
     B --> D["OCR Provider"]
     B --> E["VLM Provider"]
     D --> F["OCR 文本"]
@@ -41,12 +43,13 @@ flowchart LR
 - `services/memory_store.py`：负责 SQLite 持久化、时间线读取、删除、裁剪和去重。
 - `services/ocr.py`：OCR provider，默认 mock，可切换到 PaddleOCR。
 - `services/vlm.py`：VLM provider，默认 mock，可切换到 OpenAI-compatible 多模态接口。
+- `services/asr.py`：ASR provider，默认 mock，可切换到 faster-whisper，当前用于非流式音频上传转写。
 - `services/summary.py`：把问题、视觉回答和 OCR 文本整理成场景摘要。
 - `services/search.py`：历史检索 provider，当前默认 `ChromaSearchProvider`，也保留 lightweight / SQLite vector provider。
 - `services/rag.py`：RAG 回答生成层，把召回记忆转成用户可读答案。
-- `services/pipeline.py`：串联视觉问答、记忆写入、检索和 RAG 问答。
-- `api/routes.py`：提供 FastAPI 接口，包括 `/ask`、`/memories/search`、`/memories/rag-answer`。
-- `ui/streamlit_app.py`：提供 Web demo，包括图片输入、记忆时间线、历史检索、历史记忆问答。
+- `services/pipeline.py`：串联 ASR 转写、视觉问答、记忆写入、检索和 RAG 问答。
+- `api/routes.py`：提供 FastAPI 接口，包括 `/ask`、`/transcribe`、`/memories/search`、`/memories/rag-answer`。
+- `ui/streamlit_app.py`：提供 Web demo，包括图片输入、语音提问、记忆时间线、历史检索、历史记忆问答。
 
 ## 存储设计
 
@@ -94,6 +97,7 @@ SQLite 保存完整业务记录，Chroma 保存用于语义召回的 memory docu
 
 - OCR：`MockOCRProvider` -> `PaddleOCRProvider`
 - VLM：`MockVLMProvider` -> `OpenAICompatibleVLMProvider`
+- ASR：`MockASRProvider` -> `FasterWhisperASRProvider`
 - Search：`LightweightSemanticSearchProvider` / `VectorSearchProvider` / `ChromaSearchProvider`
 - Embedding：`HashEmbeddingProvider` -> `SentenceTransformersEmbeddingProvider`
 - RAG Answer：`RuleBasedRAGAnswerProvider` 后续可替换为真实 LLM 生成器
@@ -102,6 +106,7 @@ SQLite 保存完整业务记录，Chroma 保存用于语义召回的 memory docu
 
 ```text
 AI_GLASSES_SEARCH_PROVIDER=chroma
+AI_GLASSES_ASR_PROVIDER=mock
 AI_GLASSES_CHROMA_PATH=data/chroma
 AI_GLASSES_CHROMA_COLLECTION=visual_memory
 AI_GLASSES_EMBEDDING_PROVIDER=hash

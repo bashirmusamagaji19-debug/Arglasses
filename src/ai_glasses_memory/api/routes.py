@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from ai_glasses_memory.models.memory import MemoryEvent
 from ai_glasses_memory.services.factory import create_pipeline
 from ai_glasses_memory.services.pipeline import MemoryPipeline
-from ai_glasses_memory.services.uploads import save_input_image
+from ai_glasses_memory.services.uploads import save_input_audio, save_input_image
 
 router = APIRouter()
 
@@ -31,6 +31,12 @@ class RAGAnswerRequest(BaseModel):
 class RAGAnswerResponse(BaseModel):
     answer: str
     context_memories: list[MemoryEvent]
+
+
+class TranscriptionResponse(BaseModel):
+    text: str
+    audio_path: str
+    latency_ms: dict[str, float]
 
 
 def get_pipeline() -> MemoryPipeline:
@@ -136,6 +142,20 @@ def mobile_ask(
 ) -> MemoryEvent:
     image_path = save_input_image(image)
     return pipeline.ask(question=question, image_path=image_path)
+
+
+@router.post("/transcribe", response_model=TranscriptionResponse)
+def transcribe_audio(
+    pipeline: Annotated[MemoryPipeline, Depends(get_pipeline)],
+    audio: UploadFile = File(...),
+) -> TranscriptionResponse:
+    audio_path = save_input_audio(audio)
+    result = pipeline.transcribe_audio(audio_path or "")
+    return TranscriptionResponse(
+        text=result.text,
+        audio_path=result.audio_path,
+        latency_ms=result.latency_ms,
+    )
 
 
 @router.get("/memories", response_model=list[MemoryEvent])

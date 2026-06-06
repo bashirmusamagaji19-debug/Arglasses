@@ -163,6 +163,16 @@ def test_streamlit_ui_reports_search_and_embedding_provider():
     assert "Hash embedding 只用于验证向量检索架构" in contents
 
 
+def test_streamlit_ui_exposes_asr_audio_question_controls():
+    ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
+    contents = ui_file.read_text(encoding="utf-8")
+
+    assert "当前 ASR 模式" in contents
+    assert "语音提问" in contents
+    assert "上传语音问题" in contents
+    assert "transcribe_audio" in contents
+
+
 def test_streamlit_ui_exposes_rag_memory_answer_controls():
     ui_file = PROJECT_ROOT / "src" / "ai_glasses_memory" / "ui" / "streamlit_app.py"
     contents = ui_file.read_text(encoding="utf-8")
@@ -181,3 +191,21 @@ def test_rag_smoke_script_documents_chroma_rag_flow():
     assert "ChromaSearchProvider" in contents
     assert "answer_from_memory" in contents
     assert "鼠标是什么颜色的" in contents
+
+
+def test_asr_extra_documents_faster_whisper_dependency():
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    contents = pyproject.read_text(encoding="utf-8")
+
+    assert "asr = [" in contents
+    assert '"faster-whisper>=' in contents
+
+
+def test_env_example_documents_asr_provider_settings():
+    env_file = PROJECT_ROOT / ".env.example"
+    contents = env_file.read_text(encoding="utf-8")
+
+    assert "AI_GLASSES_ASR_PROVIDER=mock" in contents
+    assert "AI_GLASSES_ASR_MODEL=base" in contents
+    assert "AI_GLASSES_ASR_DEVICE=cpu" in contents
+    assert "AI_GLASSES_ASR_COMPUTE_TYPE=int8" in contents

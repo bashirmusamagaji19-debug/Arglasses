@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ai_glasses_memory.config import Settings, get_settings
+from ai_glasses_memory.services.asr import create_asr_provider
 from ai_glasses_memory.services.memory_store import MemoryStore
 from ai_glasses_memory.services.ocr import create_ocr_provider
 from ai_glasses_memory.services.pipeline import MemoryPipeline
@@ -28,6 +29,12 @@ def create_pipeline(
             max_tokens=resolved_settings.vlm_max_tokens,
             timeout_seconds=resolved_settings.vlm_timeout_seconds,
             max_image_width=resolved_settings.vlm_max_image_width,
+        ),
+        asr_provider=create_asr_provider(
+            resolved_settings.asr_provider,
+            model_name=resolved_settings.asr_model,
+            device=resolved_settings.asr_device,
+            compute_type=resolved_settings.asr_compute_type,
         ),
         search_provider=create_search_provider(
             resolved_settings.search_provider,
