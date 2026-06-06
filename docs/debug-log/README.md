@@ -24,3 +24,4 @@
 | 21 | 工程包装材料落后于 RAG 实现 | 对齐检索/RAG 文档，补齐简历 bullet、面试问答和 2 分钟 demo 脚本 | [bug-21-engineering-packaging-gap.md](./bug-21-engineering-packaging-gap.md) |
 | 22 | ASR 如果一开始做实时流会打断主线 | 先做非流式音频上传和 ASR provider，保留后续实时语音升级路径 | [bug-22-asr-non-streaming-first.md](./bug-22-asr-non-streaming-first.md) |
 | 23 | 默认 faster-whisper 后启动阶段不能直接加载模型 | 将 ASR 默认切到 faster-whisper，同时懒加载模型并保留 mock fallback | [bug-23-default-faster-whisper-lazy-load.md](./bug-23-default-faster-whisper-lazy-load.md) |
+| 24 | 先用 Streamlit 麦克风录音，不直接上 WebSocket 流式 ASR | 使用 `st.audio_input` 做麦克风录音后转写，保留上传 fallback 和后续实时流升级路径 | [bug-24-streamlit-microphone-before-websocket-streaming.md](./bug-24-streamlit-microphone-before-websocket-streaming.md) |

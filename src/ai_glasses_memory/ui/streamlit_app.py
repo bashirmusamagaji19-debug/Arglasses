@@ -48,9 +48,15 @@ with left:
     if selected_image is not None:
         st.image(selected_image, caption="当前画面", width="stretch")
     st.subheader("语音提问")
-    audio_file = st.file_uploader("上传语音问题", type=["wav", "mp3", "m4a", "ogg"], key="voice-question")
-    if st.button("转写语音", disabled=audio_file is None):
-        audio_path = save_input_audio(audio_file)
+    microphone_audio = st.audio_input("麦克风录音提问")
+    uploaded_audio = st.file_uploader(
+        "上传语音问题作为备用",
+        type=["wav", "mp3", "m4a", "ogg"],
+        key="voice-question",
+    )
+    selected_audio = microphone_audio or uploaded_audio
+    if st.button("转写语音", disabled=selected_audio is None):
+        audio_path = save_input_audio(selected_audio)
         transcription = pipeline.transcribe_audio(audio_path or "")
         st.session_state["transcribed_question"] = transcription.text
         st.session_state["asr_latency_ms"] = transcription.latency_ms

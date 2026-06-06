@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG + 非流式语音提问”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
+当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG + 麦克风语音提问”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
 
 ```text
 鼠标是什么颜色的？
@@ -16,7 +16,7 @@
 flowchart LR
     A["手机拍照 / 图片上传"] --> B["MemoryPipeline"]
     C["用户问题"] --> B
-    T["音频上传"] --> U["ASR Provider"]
+    T["麦克风录音 / 音频上传"] --> U["ASR Provider"]
     U --> C
     B --> D["OCR Provider"]
     B --> E["VLM Provider"]
@@ -43,7 +43,7 @@ flowchart LR
 - `services/memory_store.py`：负责 SQLite 持久化、时间线读取、删除、裁剪和去重。
 - `services/ocr.py`：OCR provider，默认 mock，可切换到 PaddleOCR。
 - `services/vlm.py`：VLM provider，默认 mock，可切换到 OpenAI-compatible 多模态接口。
-- `services/asr.py`：ASR provider，默认 faster-whisper，mock 作为 fallback，当前用于非流式音频上传转写。
+- `services/asr.py`：ASR provider，默认 faster-whisper，mock 作为 fallback，当前用于麦克风录音和音频上传转写。
 - `services/summary.py`：把问题、视觉回答和 OCR 文本整理成场景摘要。
 - `services/search.py`：历史检索 provider，当前默认 `ChromaSearchProvider`，也保留 lightweight / SQLite vector provider。
 - `services/rag.py`：RAG 回答生成层，把召回记忆转成用户可读答案。

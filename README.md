@@ -13,7 +13,7 @@
 - 在 Streamlit UI 展示记忆时间线。
 - 支持基于关键词的历史搜索。
 - 记录 OCR、VLM、摘要和总耗时。
-- 支持非流式语音提问入口：上传音频后由 ASR provider 转写成问题文本，默认使用 faster-whisper，mock 作为 fallback。
+- 支持麦克风录音语音提问：录音后由 ASR provider 转写成问题文本，默认使用 faster-whisper，文件上传作为 fallback。
 - 支持 Chroma RAG 历史记忆问答。
 
 当前阶段不追求真实 AI 能力，重点是先有一个能上线、能打开、能演示的作品集入口。
@@ -136,7 +136,7 @@ AI_GLASSES_ASR_COMPUTE_TYPE=int8
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-Streamlit 的“语音提问”区域可以上传 `.wav`、`.mp3`、`.m4a` 或 `.ogg` 音频，系统会先转写成问题文本，再由用户提交到视觉记忆 pipeline。faster-whisper 模型采用首次转写时懒加载，因此打开页面不会立即加载模型；第一次转写可能需要下载和加载模型。当前暂不做实时麦克风流和 WebRTC，详细说明见 [docs/phase4-asr.md](docs/phase4-asr.md)。
+Streamlit 的“语音提问”区域支持麦克风录音，也保留 `.wav`、`.mp3`、`.m4a`、`.ogg` 文件上传作为 fallback。系统会先转写成问题文本，再由用户提交到视觉记忆 pipeline。faster-whisper 模型采用首次转写时懒加载，因此打开页面不会立即加载模型；第一次转写可能需要下载和加载模型。当前版本是“录音后分段转写”，暂不做 WebSocket token 级实时流式，详细说明见 [docs/phase4-asr.md](docs/phase4-asr.md)。
 
 ## 在线 Demo
 
@@ -150,7 +150,7 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 | 模拟回答与场景摘要 | 系统生成模拟 OCR 文本、VLM 回答和场景摘要 |
 | 记忆时间线 | 自动保存每次交互记录，按时间倒序展示 |
 | 历史检索 / RAG | 默认使用 Chroma 召回历史记忆，并支持基于历史记忆的问答 |
-| 语音提问 | 默认 faster-whisper，本地也可切换到 mock ASR 做低依赖 fallback |
+| 语音提问 | 麦克风录音后转写，默认 faster-whisper，也可切换到 mock ASR 做低依赖 fallback |
 
 ## API
 
@@ -187,7 +187,7 @@ docs/                                 # 架构、部署和学习文档
 - 真实 OCR：PaddleOCR 或 EasyOCR。
 - 真实 VLM：多模态模型。
 - 检索：默认使用轻量语义检索；本地可切换到向量检索，后续可升级到 Chroma 或 FAISS。
-- 语音输入：当前已支持非流式音频上传转写；后续再做实时麦克风和流式 ASR。
+- 语音输入：当前已支持麦克风录音后转写；后续再做 WebSocket / WebRTC 级实时流式 ASR。
 - 硬件端：RK3588 + 摄像头采集、帧采样、图像压缩和 HTTP 上传。
 
 当前场景摘要已从 mock 文案改为基于用户问题、VLM 回答和 OCR 文本整理的 rule-based 摘要，不会额外产生一次云端模型调用。

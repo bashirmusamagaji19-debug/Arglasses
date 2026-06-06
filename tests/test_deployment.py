@@ -169,6 +169,8 @@ def test_streamlit_ui_exposes_asr_audio_question_controls():
 
     assert "当前 ASR 模式" in contents
     assert "语音提问" in contents
+    assert "st.audio_input" in contents
+    assert "麦克风录音提问" in contents
     assert "上传语音问题" in contents
     assert "transcribe_audio" in contents
 

@@ -12,7 +12,7 @@ AI 眼镜系统不应该只有文字输入。阶段 4 的目标是补上“听�
 -> 记忆写入和 RAG 检索
 ```
 
-第一版先做非流式音频上传，不做实时麦克风流和 WebRTC。
+当前版本先做 Streamlit 原生麦克风录音和音频上传 fallback，不做 WebSocket / WebRTC 级 token 流式。
 
 ## 当前实现
 
@@ -33,9 +33,9 @@ AI_GLASSES_ASR_DEVICE=cpu
 AI_GLASSES_ASR_COMPUTE_TYPE=int8
 ```
 
-Streamlit UI 新增“语音提问”区域：
+Streamlit UI 的“语音提问”区域：
 
-1. 上传 `.wav`、`.mp3`、`.m4a` 或 `.ogg` 音频。
+1. 使用 `st.audio_input` 录制麦克风语音，或上传 `.wav`、`.mp3`、`.m4a`、`.ogg` 音频作为 fallback。
 2. 点击“转写语音”。
 3. 系统调用 `MemoryPipeline.transcribe_audio()`。
 4. 转写结果填入问题输入框。
@@ -55,9 +55,11 @@ audio_path
 latency_ms
 ```
 
-## 为什么先做非流式 ASR
+## 为什么先做麦克风录音后转写
 
-实时语音输入会引入更多复杂度：
+`st.audio_input` 已经能让用户直接用浏览器麦克风录音，体验上比文件上传更接近 AI 眼镜语音提问。但它仍然是“录完一段再转写”，不是 token-by-token 流式 ASR。
+
+真正的 WebSocket / WebRTC 流式语音输入会引入更多复杂度：
 
 - 浏览器麦克风权限。
 - WebRTC 或前端录音组件。
@@ -65,7 +67,7 @@ latency_ms
 - 延迟和交互状态管理。
 - 云端部署对音频设备和长连接的限制。
 
-当前项目的主目标是先补齐 AI 眼镜系统链路中的“听见”能力，而不是马上做生产级实时语音交互。音频上传版已经能验证 ASR provider、配置、延迟统计和 UI 问题文本 handoff。
+当前项目的主目标是先补齐 AI 眼镜系统链路中的“听见”能力，而不是马上做生产级实时语音交互。麦克风录音版已经能验证 ASR provider、配置、延迟统计和 UI 问题文本 handoff，同时保留上传音频 fallback。
 
 ## faster-whisper 默认模式
 
@@ -116,13 +118,12 @@ ASR 只负责把语音变成问题文本，不直接写入 memory event。原因
 
 ## 后续扩展
 
-- 浏览器录音按钮。
-- 麦克风实时转写。
+- WebSocket / WebRTC 麦克风实时转写。
 - 流式 ASR 分段结果。
 - 端侧 RK3588 采集音频并上传。
 - 把 ASR 文本、置信度和语言信息写入 memory event 扩展字段。
 
 ## 面试表述
 
-> 我没有一开始做实时语音流，而是先做非流式 ASR provider。这样可以先验证“语音问题 -> 文本问题 -> 视觉记忆 pipeline”的系统边界，同时避免 WebRTC、浏览器麦克风权限和流式 ASR 状态管理把主线复杂化。  
+> 我没有一开始做 WebSocket 或 WebRTC 级实时语音流，而是先用 Streamlit 原生 `audio_input` 做麦克风录音后转写。这样用户已经可以用麦克风提问，同时系统仍然保持 ASR provider、延迟统计和视觉记忆 pipeline 的清晰边界。  
 > 当前默认使用 faster-whisper，mock 作为 fallback。为了避免打开 demo 时就加载模型，我把 faster-whisper provider 做成懒加载，第一次真正转写音频时才加载模型。
