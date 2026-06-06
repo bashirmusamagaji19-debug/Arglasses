@@ -100,6 +100,21 @@ def test_settings_include_search_and_embedding_options(tmp_path, monkeypatch):
     assert settings.embedding_dimensions == 64
 
 
+def test_default_settings_use_chroma_rag_search(monkeypatch):
+    for name in [
+        "AI_GLASSES_SEARCH_PROVIDER",
+        "AI_GLASSES_CHROMA_PATH",
+        "AI_GLASSES_CHROMA_COLLECTION",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings(env_file=None)
+
+    assert settings.search_provider == "chroma"
+    assert settings.chroma_path.as_posix() == "data/chroma"
+    assert settings.chroma_collection == "visual_memory"
+
+
 def test_settings_include_chroma_vector_store_options(tmp_path, monkeypatch):
     env_file = tmp_path / ".env"
     env_file.write_text(

@@ -16,7 +16,7 @@ class Settings:
     vlm_max_tokens: int = 512
     vlm_timeout_seconds: float = 30
     vlm_max_image_width: int = 1024
-    search_provider: str = "lightweight"
+    search_provider: str = "chroma"
     vector_db_path: Path = Path("data/vector_memory.sqlite3")
     chroma_path: Path = Path("data/chroma")
     chroma_collection: str = "visual_memory"
@@ -57,7 +57,7 @@ def get_settings(env_file: Path | str | None = Path(".env")) -> Settings:
         vlm_max_tokens=int(os.getenv("AI_GLASSES_VLM_MAX_TOKENS", "512")),
         vlm_timeout_seconds=float(os.getenv("AI_GLASSES_VLM_TIMEOUT_SECONDS", "30")),
         vlm_max_image_width=int(os.getenv("AI_GLASSES_VLM_MAX_IMAGE_WIDTH", "1024")),
-        search_provider=os.getenv("AI_GLASSES_SEARCH_PROVIDER", "lightweight"),
+        search_provider=os.getenv("AI_GLASSES_SEARCH_PROVIDER", "chroma"),
         vector_db_path=Path(os.getenv("AI_GLASSES_VECTOR_DB_PATH", "data/vector_memory.sqlite3")),
         chroma_path=Path(os.getenv("AI_GLASSES_CHROMA_PATH", "data/chroma")),
         chroma_collection=os.getenv("AI_GLASSES_CHROMA_COLLECTION", "visual_memory"),

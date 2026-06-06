@@ -36,6 +36,20 @@ def test_cloud_requirements_include_runtime_image_library():
     assert '"pillow>=' in pyproject.read_text(encoding="utf-8").lower()
 
 
+def test_cloud_requirements_include_default_chroma_runtime_dependency():
+    requirements = PROJECT_ROOT / "requirements.txt"
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    requirements_text = requirements.read_text(encoding="utf-8").lower()
+    pyproject_text = pyproject.read_text(encoding="utf-8").lower()
+
+    assert "chromadb" in requirements_text
+    assert "kubernetes==35.0.0" in requirements_text
+    assert "pyyaml==6.0.2" in requirements_text
+    assert '"chromadb>=' in pyproject_text
+    assert '"kubernetes==35.0.0"' in pyproject_text
+    assert '"pyyaml==6.0.2"' in pyproject_text
+
+
 def test_python_runtime_preference_is_documented():
     runtime = PROJECT_ROOT / "runtime.txt"
 
@@ -106,7 +120,7 @@ def test_env_example_documents_vector_search_settings():
     env_file = PROJECT_ROOT / ".env.example"
     contents = env_file.read_text(encoding="utf-8")
 
-    assert "AI_GLASSES_SEARCH_PROVIDER=lightweight" in contents
+    assert "AI_GLASSES_SEARCH_PROVIDER=chroma" in contents
     assert "AI_GLASSES_VECTOR_DB_PATH=data/vector_memory.sqlite3" in contents
     assert "AI_GLASSES_CHROMA_PATH=data/chroma" in contents
     assert "AI_GLASSES_CHROMA_COLLECTION=visual_memory" in contents
