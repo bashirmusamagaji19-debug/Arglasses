@@ -72,4 +72,31 @@ def test_rule_based_rag_answer_provider_summarizes_top_context(tmp_path):
     result = provider.answer("我刚才看到的鼠标是什么颜色？", [memory])
 
     assert "根据历史记忆" in result
-    assert "黑色无线鼠标" in result
+    assert "鼠标主要是黑色" in result
+    assert "白色" not in result
+
+
+def test_rule_based_rag_answer_provider_answers_color_question_directly(tmp_path):
+    store = MemoryStore(tmp_path / "memory.sqlite3")
+    black_mouse = store.add_event(
+        MemoryEventCreate(
+            question="我刚才看到了什么？",
+            answer="你刚才看到的是一只黑色的无线鼠标，放在白色桌面上。",
+            scene_summary="白色桌面上有黑色无线鼠标。",
+        )
+    )
+    silver_mouse = store.add_event(
+        MemoryEventCreate(
+            question="照片里面有什么？",
+            answer="前景是一只黑色人体工学鼠标，后方稍远处是一只银灰色扁平鼠标。",
+            scene_summary="桌面上有黑色鼠标和银灰色鼠标。",
+        )
+    )
+    provider = RuleBasedRAGAnswerProvider()
+
+    result = provider.answer("鼠标是什么颜色的？", [black_mouse, silver_mouse])
+
+    assert result.startswith("根据历史记忆，鼠标主要是黑色")
+    assert "银灰色" in result
+    assert "最相关的一次记录是" not in result
+    assert "相关记忆：" not in result

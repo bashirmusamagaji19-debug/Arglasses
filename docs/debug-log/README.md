@@ -19,3 +19,4 @@
 | 10 | 手机拍照上传原图过大 | 上传边界未压缩 4096x3072 原图，导致 OCR/VLM 下游被迫处理大图 | [bug-10-phone-photo-upload-too-large.md](./bug-10-phone-photo-upload-too-large.md) |
 | 17 | 只有向量搜索展示还不能完整体现 RAG | 补齐 retrieval -> context -> generation 闭环，并把 Chroma 作为可选 provider | [bug-17-vector-search-is-not-full-rag.md](./bug-17-vector-search-is-not-full-rag.md) |
 | 18 | Chroma 设为默认检索后端时出现依赖冲突 | Chroma 的 kubernetes 依赖和 PaddleX 的 PyYAML pin 冲突，固定兼容组合 | [bug-18-chroma-default-dependency-conflict.md](./bug-18-chroma-default-dependency-conflict.md) |
+| 19 | RAG 回答像上下文拼接而不是自然问答 | 针对颜色追问抽取并合并关键信息，保留上下文列表作为证据 | [bug-19-rag-answer-context-dump.md](./bug-19-rag-answer-context-dump.md) |

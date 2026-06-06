@@ -59,7 +59,7 @@ def test_api_answers_from_retrieved_memories(tmp_path):
 
     assert response.status_code == 200
     payload = response.json()
-    assert "黑色无线鼠标" in payload["answer"]
+    assert "鼠标主要是黑色" in payload["answer"]
     assert len(payload["context_memories"]) == 1
 
     app.dependency_overrides.clear()
