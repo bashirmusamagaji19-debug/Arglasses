@@ -171,3 +171,13 @@ def test_streamlit_ui_exposes_rag_memory_answer_controls():
     assert "基于记忆回答" in contents
     assert "answer_from_memory" in contents
     assert "RAG 回答" in contents
+
+
+def test_rag_smoke_script_documents_chroma_rag_flow():
+    script = PROJECT_ROOT / "scripts" / "rag_smoke.py"
+
+    assert script.exists()
+    contents = script.read_text(encoding="utf-8")
+    assert "ChromaSearchProvider" in contents
+    assert "answer_from_memory" in contents
+    assert "鼠标是什么颜色的" in contents

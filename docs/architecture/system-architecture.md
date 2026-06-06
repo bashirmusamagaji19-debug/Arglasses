@@ -2,42 +2,131 @@
 
 ## 当前阶段
 
-第一周只实现系统骨架，不接真实 OCR、ASR、VLM 和向量数据库。目标是先跑通“输入 -> 理解 -> 记忆 -> 展示 -> 检索”的最小闭环。
+当前系统已经从第一版 Web MVP 升级为“视觉记忆 RAG”原型。目标不是只做一次图片问答，而是把每次视觉交互沉淀成可检索的历史记忆，并支持用户继续追问：
 
-## 架构图
+```text
+鼠标是什么颜色的？
+刚才看到的屏幕上是什么项目？
+我手上拿过什么东西？
+```
+
+## 当前主链路
 
 ```mermaid
 flowchart LR
-    A["图片路径 / 上传图片"] --> B["MemoryPipeline"]
+    A["手机拍照 / 图片上传"] --> B["MemoryPipeline"]
     C["用户问题"] --> B
-    B --> D["MockAIService"]
-    D --> E["模拟 OCR 文本"]
-    D --> F["模拟 VLM 回答"]
-    D --> G["模拟场景摘要"]
-    B --> H["LatencyTracker"]
-    B --> I["MemoryStore"]
-    I --> J["SQLite memory_events"]
-    J --> K["时间线"]
-    J --> L["关键词检索"]
-    K --> M["Streamlit UI / FastAPI"]
-    L --> M
+    B --> D["OCR Provider"]
+    B --> E["VLM Provider"]
+    D --> F["OCR 文本"]
+    E --> G["视觉回答"]
+    F --> H["RuleBasedSummaryProvider"]
+    G --> H
+    H --> I["场景摘要"]
+    B --> J["SQLite MemoryStore"]
+    J --> K["memory_events"]
+    K --> L["ChromaSearchProvider"]
+    L --> M["Chroma collection"]
+    N["历史追问"] --> O["RAG Answer"]
+    O --> L
+    L --> P["Top-k 相关记忆"]
+    P --> Q["RuleBasedRAGAnswerProvider"]
+    Q --> R["基于历史记忆的回答"]
+    P --> S["使用的历史记忆"]
 ```
 
 ## 模块职责
 
-- `models/memory.py`：定义 memory event 数据模型。
-- `services/memory_store.py`：负责 SQLite 写入、时间线读取和关键词搜索。
-- `services/mock_ai.py`：模拟 OCR、VLM 和场景摘要，保证第一周不被模型依赖卡住。
-- `services/latency.py`：记录各阶段耗时。
-- `services/pipeline.py`：串联一次视觉记忆交互。
-- `api/routes.py`：提供 FastAPI 接口。
-- `ui/streamlit_app.py`：提供第一版演示界面。
+- `models/memory.py`：定义视觉记忆事件的数据模型。
+- `services/memory_store.py`：负责 SQLite 持久化、时间线读取、删除、裁剪和去重。
+- `services/ocr.py`：OCR provider，默认 mock，可切换到 PaddleOCR。
+- `services/vlm.py`：VLM provider，默认 mock，可切换到 OpenAI-compatible 多模态接口。
+- `services/summary.py`：把问题、视觉回答和 OCR 文本整理成场景摘要。
+- `services/search.py`：历史检索 provider，当前默认 `ChromaSearchProvider`，也保留 lightweight / SQLite vector provider。
+- `services/rag.py`：RAG 回答生成层，把召回记忆转成用户可读答案。
+- `services/pipeline.py`：串联视觉问答、记忆写入、检索和 RAG 问答。
+- `api/routes.py`：提供 FastAPI 接口，包括 `/ask`、`/memories/search`、`/memories/rag-answer`。
+- `ui/streamlit_app.py`：提供 Web demo，包括图片输入、记忆时间线、历史检索、历史记忆问答。
 
-## 后续扩展方式
+## 存储设计
 
-后续接真实模块时，不应该推翻当前结构，而是在已有接口后替换实现：
+```text
+SQLite
+└── memory_events
+    ├── question
+    ├── answer
+    ├── scene_summary
+    ├── ocr_text
+    ├── image_path
+    └── latency_ms
 
-- 用真实 OCR 替换 `MockAIService.run_ocr`。
-- 用真实 VLM 替换 `MockAIService.answer_question`。
-- 增加 ASR 后，把语音转写结果作为 `question` 输入 pipeline。
-- 增加 Chroma 或 FAISS 后，让 `MemoryStore` 或新建 `VectorMemoryStore` 同步写入 embedding。
+Chroma
+└── visual_memory collection
+    ├── document: question / answer / summary / ocr
+    ├── embedding
+    └── metadata: memory_id / created_at
+```
+
+SQLite 保存完整业务记录，Chroma 保存用于语义召回的 memory document 和 metadata。检索时 Chroma 返回 memory id，再回 SQLite 取完整 `MemoryEvent`。
+
+## RAG 闭环
+
+当前 RAG 问答流程是：
+
+```text
+用户历史追问
+-> Chroma 检索 top-k memory documents
+-> 用 memory_id 回表取完整 MemoryEvent
+-> RuleBasedRAGAnswerProvider 生成回答
+-> UI 展示回答 + 使用的历史记忆
+```
+
+例如：
+
+```text
+问题：鼠标是什么颜色的？
+回答：根据历史记忆，鼠标主要是黑色的；另外也出现过银灰色的鼠标。
+```
+
+这个设计把“向量搜索”升级成完整 RAG：不仅能召回历史记忆，还能把召回结果转成可直接使用的答案。
+
+## 可替换边界
+
+- OCR：`MockOCRProvider` -> `PaddleOCRProvider`
+- VLM：`MockVLMProvider` -> `OpenAICompatibleVLMProvider`
+- Search：`LightweightSemanticSearchProvider` / `VectorSearchProvider` / `ChromaSearchProvider`
+- Embedding：`HashEmbeddingProvider` -> `SentenceTransformersEmbeddingProvider`
+- RAG Answer：`RuleBasedRAGAnswerProvider` 后续可替换为真实 LLM 生成器
+
+## 当前默认配置
+
+```text
+AI_GLASSES_SEARCH_PROVIDER=chroma
+AI_GLASSES_CHROMA_PATH=data/chroma
+AI_GLASSES_CHROMA_COLLECTION=visual_memory
+AI_GLASSES_EMBEDDING_PROVIDER=hash
+```
+
+本地要获得更好的中文语义召回效果，可以切换为：
+
+```text
+AI_GLASSES_EMBEDDING_PROVIDER=sentence_transformers
+AI_GLASSES_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
+AI_GLASSES_EMBEDDING_DIMENSIONS=512
+```
+
+## 一键验证
+
+运行：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\rag_smoke.py
+```
+
+预期能看到：
+
+```text
+question: 鼠标是什么颜色的？
+answer: 根据历史记忆，鼠标主要是黑色的；另外也出现过银灰色的鼠标。
+contexts: 2
+```
