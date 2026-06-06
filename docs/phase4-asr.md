@@ -20,14 +20,14 @@ AI 眼镜系统不应该只有文字输入。阶段 4 的目标是补上“听�
 
 ```text
 ASRProvider
-├── MockASRProvider
-└── FasterWhisperASRProvider
+├── FasterWhisperASRProvider
+└── MockASRProvider
 ```
 
 默认配置：
 
 ```text
-AI_GLASSES_ASR_PROVIDER=mock
+AI_GLASSES_ASR_PROVIDER=faster_whisper
 AI_GLASSES_ASR_MODEL=base
 AI_GLASSES_ASR_DEVICE=cpu
 AI_GLASSES_ASR_COMPUTE_TYPE=int8
@@ -67,15 +67,15 @@ latency_ms
 
 当前项目的主目标是先补齐 AI 眼镜系统链路中的“听见”能力，而不是马上做生产级实时语音交互。音频上传版已经能验证 ASR provider、配置、延迟统计和 UI 问题文本 handoff。
 
-## 启用 faster-whisper
+## faster-whisper 默认模式
 
-默认 demo 不安装 faster-whisper，避免重依赖影响部署。需要本地真实 ASR 时安装 optional dependency：
+当前默认 ASR provider 是 `faster_whisper`。本地安装 / 更新依赖：
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[asr]"
 ```
 
-然后设置：
+默认配置如下：
 
 ```powershell
 $env:AI_GLASSES_ASR_PROVIDER="faster_whisper"
@@ -86,6 +86,14 @@ $env:AI_GLASSES_ASR_COMPUTE_TYPE="int8"
 ```
 
 CPU 上建议先用 `base` 或更小模型，并用短音频验证延迟。
+
+如果需要低依赖 fallback，可以临时切回 mock：
+
+```powershell
+$env:AI_GLASSES_ASR_PROVIDER="mock"
+```
+
+`FasterWhisperASRProvider` 采用懒加载：应用启动时只创建 provider，不立即加载模型；第一次点击“转写语音”时才导入 faster-whisper 并加载模型。
 
 ## 和视觉记忆 pipeline 的关系
 
@@ -117,4 +125,4 @@ ASR 只负责把语音变成问题文本，不直接写入 memory event。原因
 ## 面试表述
 
 > 我没有一开始做实时语音流，而是先做非流式 ASR provider。这样可以先验证“语音问题 -> 文本问题 -> 视觉记忆 pipeline”的系统边界，同时避免 WebRTC、浏览器麦克风权限和流式 ASR 状态管理把主线复杂化。  
-> 当前默认 mock，保证 demo 不依赖重模型；本地可以切换到 faster-whisper。这个设计和 OCR/VLM 一样，都是 provider 化、可选真实模型、默认稳定 fallback。
+> 当前默认使用 faster-whisper，mock 作为 fallback。为了避免打开 demo 时就加载模型，我把 faster-whisper provider 做成懒加载，第一次真正转写音频时才加载模型。

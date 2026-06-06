@@ -16,7 +16,7 @@ class Settings:
     vlm_max_tokens: int = 512
     vlm_timeout_seconds: float = 30
     vlm_max_image_width: int = 1024
-    asr_provider: str = "mock"
+    asr_provider: str = "faster_whisper"
     asr_model: str = "base"
     asr_device: str = "cpu"
     asr_compute_type: str = "int8"
@@ -61,7 +61,7 @@ def get_settings(env_file: Path | str | None = Path(".env")) -> Settings:
         vlm_max_tokens=int(os.getenv("AI_GLASSES_VLM_MAX_TOKENS", "512")),
         vlm_timeout_seconds=float(os.getenv("AI_GLASSES_VLM_TIMEOUT_SECONDS", "30")),
         vlm_max_image_width=int(os.getenv("AI_GLASSES_VLM_MAX_IMAGE_WIDTH", "1024")),
-        asr_provider=os.getenv("AI_GLASSES_ASR_PROVIDER", "mock"),
+        asr_provider=os.getenv("AI_GLASSES_ASR_PROVIDER", "faster_whisper"),
         asr_model=os.getenv("AI_GLASSES_ASR_MODEL", "base"),
         asr_device=os.getenv("AI_GLASSES_ASR_DEVICE", "cpu"),
         asr_compute_type=os.getenv("AI_GLASSES_ASR_COMPUTE_TYPE", "int8"),

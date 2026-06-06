@@ -1,6 +1,7 @@
 import pytest
 
 from ai_glasses_memory.services.asr import (
+    FasterWhisperASRProvider,
     MockASRProvider,
     create_asr_provider,
 )
@@ -21,6 +22,24 @@ def test_create_asr_provider_defaults_to_mock():
     assert isinstance(provider, MockASRProvider)
 
 
+def test_faster_whisper_provider_loads_model_lazily(monkeypatch):
+    imports: list[str] = []
+    import builtins
+
+    original_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        imports.append(name)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    provider = FasterWhisperASRProvider("base", device="cpu", compute_type="int8")
+
+    assert provider.model is None
+    assert "faster_whisper" not in imports
+
+
 def test_create_asr_provider_rejects_unknown_provider():
     with pytest.raises(ValueError, match="Unsupported ASR provider"):
         create_asr_provider("unknown")
@@ -38,5 +57,7 @@ def test_faster_whisper_provider_reports_missing_optional_dependency(monkeypatch
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
 
+    provider = create_asr_provider("faster_whisper")
+
     with pytest.raises(RuntimeError, match="faster-whisper is not installed"):
-        create_asr_provider("faster_whisper")
+        provider.transcribe("question.wav")

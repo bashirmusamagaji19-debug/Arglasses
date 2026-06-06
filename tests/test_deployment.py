@@ -201,11 +201,18 @@ def test_asr_extra_documents_faster_whisper_dependency():
     assert '"faster-whisper>=' in contents
 
 
+def test_cloud_requirements_include_default_asr_runtime_dependency():
+    requirements = PROJECT_ROOT / "requirements.txt"
+    requirements_text = requirements.read_text(encoding="utf-8").lower()
+
+    assert "faster-whisper" in requirements_text
+
+
 def test_env_example_documents_asr_provider_settings():
     env_file = PROJECT_ROOT / ".env.example"
     contents = env_file.read_text(encoding="utf-8")
 
-    assert "AI_GLASSES_ASR_PROVIDER=mock" in contents
+    assert "AI_GLASSES_ASR_PROVIDER=faster_whisper" in contents
     assert "AI_GLASSES_ASR_MODEL=base" in contents
     assert "AI_GLASSES_ASR_DEVICE=cpu" in contents
     assert "AI_GLASSES_ASR_COMPUTE_TYPE=int8" in contents

@@ -43,7 +43,7 @@ flowchart LR
 - `services/memory_store.py`：负责 SQLite 持久化、时间线读取、删除、裁剪和去重。
 - `services/ocr.py`：OCR provider，默认 mock，可切换到 PaddleOCR。
 - `services/vlm.py`：VLM provider，默认 mock，可切换到 OpenAI-compatible 多模态接口。
-- `services/asr.py`：ASR provider，默认 mock，可切换到 faster-whisper，当前用于非流式音频上传转写。
+- `services/asr.py`：ASR provider，默认 faster-whisper，mock 作为 fallback，当前用于非流式音频上传转写。
 - `services/summary.py`：把问题、视觉回答和 OCR 文本整理成场景摘要。
 - `services/search.py`：历史检索 provider，当前默认 `ChromaSearchProvider`，也保留 lightweight / SQLite vector provider。
 - `services/rag.py`：RAG 回答生成层，把召回记忆转成用户可读答案。
@@ -106,7 +106,7 @@ SQLite 保存完整业务记录，Chroma 保存用于语义召回的 memory docu
 
 ```text
 AI_GLASSES_SEARCH_PROVIDER=chroma
-AI_GLASSES_ASR_PROVIDER=mock
+AI_GLASSES_ASR_PROVIDER=faster_whisper
 AI_GLASSES_CHROMA_PATH=data/chroma
 AI_GLASSES_CHROMA_COLLECTION=visual_memory
 AI_GLASSES_EMBEDDING_PROVIDER=hash

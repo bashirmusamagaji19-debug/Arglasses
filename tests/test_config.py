@@ -168,3 +168,20 @@ def test_settings_include_asr_options(tmp_path, monkeypatch):
     assert settings.asr_model == "small"
     assert settings.asr_device == "cpu"
     assert settings.asr_compute_type == "int8"
+
+
+def test_default_settings_use_faster_whisper_asr(monkeypatch):
+    for name in [
+        "AI_GLASSES_ASR_PROVIDER",
+        "AI_GLASSES_ASR_MODEL",
+        "AI_GLASSES_ASR_DEVICE",
+        "AI_GLASSES_ASR_COMPUTE_TYPE",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings(env_file=None)
+
+    assert settings.asr_provider == "faster_whisper"
+    assert settings.asr_model == "base"
+    assert settings.asr_device == "cpu"
+    assert settings.asr_compute_type == "int8"

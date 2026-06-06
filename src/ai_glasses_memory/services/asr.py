@@ -29,6 +29,15 @@ class FasterWhisperASRProvider:
         device: str = "cpu",
         compute_type: str = "int8",
     ) -> None:
+        self.model_name = model_name
+        self.device = device
+        self.compute_type = compute_type
+        self.model = None
+
+    def _get_model(self):
+        if self.model is not None:
+            return self.model
+
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:
@@ -36,10 +45,15 @@ class FasterWhisperASRProvider:
                 "faster-whisper is not installed. Install the ASR optional dependency first."
             ) from exc
 
-        self.model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        self.model = WhisperModel(
+            self.model_name,
+            device=self.device,
+            compute_type=self.compute_type,
+        )
+        return self.model
 
     def transcribe(self, audio_path: str) -> str:
-        segments, _info = self.model.transcribe(audio_path)
+        segments, _info = self._get_model().transcribe(audio_path)
         text = "".join(segment.text for segment in segments).strip()
         return text
 
