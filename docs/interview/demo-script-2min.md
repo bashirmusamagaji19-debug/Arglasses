@@ -81,7 +81,7 @@
 
 **讲解：**
 
-> 当前版本已经跑通 `/live` 实时预览截帧、麦克风录音语音提问、OCR/VLM provider、SQLite 记忆库、Chroma 检索和 RAG 历史问答。Streamlit 现在更像 dashboard，负责时间线、检索和调试展示。后续可以继续补 WebSocket / WebRTC 级实时流式 ASR、自动抽帧和硬件端 HTTP 上传。
+> 当前版本已经跑通 `/live` 实时预览截帧、Qwen-ASR-Realtime 后端代理、麦克风语音提问、OCR/VLM provider、SQLite 记忆库、Chroma 检索和 RAG 历史问答。Streamlit 现在更像 dashboard，负责时间线、检索和调试展示。后续可以继续优化音频格式、自动抽帧和硬件端 HTTP 上传。
 
 ## 备用命令
 

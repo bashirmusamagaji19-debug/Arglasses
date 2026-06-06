@@ -218,3 +218,6 @@ def test_env_example_documents_asr_provider_settings():
     assert "AI_GLASSES_ASR_MODEL=base" in contents
     assert "AI_GLASSES_ASR_DEVICE=cpu" in contents
     assert "AI_GLASSES_ASR_COMPUTE_TYPE=int8" in contents
+    assert "AI_GLASSES_QWEN_ASR_MODEL=qwen3-asr-flash-realtime" in contents
+    assert "AI_GLASSES_QWEN_ASR_WS_URL=wss://dashscope.aliyuncs.com/api-ws/v1/realtime" in contents
+    assert "DASHSCOPE_API_KEY=" in contents

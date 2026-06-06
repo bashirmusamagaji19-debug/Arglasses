@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from ai_glasses_memory.config import get_settings
 from ai_glasses_memory.models.memory import MemoryEvent
 from ai_glasses_memory.services.factory import create_pipeline
 from ai_glasses_memory.services.pipeline import MemoryPipeline
@@ -245,6 +248,8 @@ def live_page() -> str:
       <section>
         <label for="question">问题</label>
         <textarea id="question">我现在看到了什么？</textarea>
+        <button id="startRealtimeAsr" class="secondary">开始实时识别</button>
+        <button id="stopRealtimeAsr" class="warn" disabled>停止实时识别</button>
         <button id="startRecord" class="secondary">开始录音</button>
         <button id="stopRecord" class="warn" disabled>停止录音并转写</button>
         <button id="submitQuestion">截取当前画面并提问</button>
@@ -261,12 +266,16 @@ def live_page() -> str:
     const voiceStatus = document.getElementById("voiceStatus");
     const result = document.getElementById("result");
     const question = document.getElementById("question");
+    const startRealtimeAsrButton = document.getElementById("startRealtimeAsr");
+    const stopRealtimeAsrButton = document.getElementById("stopRealtimeAsr");
     const startRecordButton = document.getElementById("startRecord");
     const stopRecordButton = document.getElementById("stopRecord");
     const submitQuestionButton = document.getElementById("submitQuestion");
 
     let mediaStream = null;
     let mediaRecorder = null;
+    let realtimeRecorder = null;
+    let realtimeSocket = null;
     let recordedChunks = [];
 
     async function startCamera() {
@@ -293,6 +302,65 @@ def live_page() -> str:
         canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.86);
       });
     }
+
+    function realtimeAsrUrl() {
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      return `${protocol}://${window.location.host}/live/asr/ws`;
+    }
+
+    function stopRealtimeAsr() {
+      if (realtimeRecorder && realtimeRecorder.state !== "inactive") {
+        realtimeRecorder.stop();
+      }
+      if (realtimeSocket && realtimeSocket.readyState === WebSocket.OPEN) {
+        realtimeSocket.close();
+      }
+      startRealtimeAsrButton.disabled = false;
+      stopRealtimeAsrButton.disabled = true;
+    }
+
+    startRealtimeAsrButton.addEventListener("click", () => {
+      if (!mediaStream) {
+        voiceStatus.textContent = "摄像头/麦克风还没有就绪。";
+        return;
+      }
+      realtimeSocket = new WebSocket(realtimeAsrUrl());
+      realtimeSocket.onopen = () => {
+        realtimeRecorder = new MediaRecorder(mediaStream, { mimeType: "audio/webm" });
+        realtimeRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && realtimeSocket.readyState === WebSocket.OPEN) {
+            realtimeSocket.send(event.data);
+          }
+        };
+        realtimeRecorder.start(500);
+        startRealtimeAsrButton.disabled = true;
+        stopRealtimeAsrButton.disabled = false;
+        voiceStatus.textContent = "实时识别中...";
+      };
+      realtimeSocket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "transcript" && payload.text) {
+            question.value = payload.text;
+            voiceStatus.textContent = "实时识别：" + payload.text;
+          } else if (payload.type === "error") {
+            voiceStatus.textContent = "实时识别错误：" + payload.message;
+          } else if (payload.type === "ready") {
+            voiceStatus.textContent = "实时识别连接已就绪。";
+          }
+        } catch {
+          voiceStatus.textContent = event.data;
+        }
+      };
+      realtimeSocket.onclose = () => {
+        stopRealtimeAsr();
+      };
+    });
+
+    stopRealtimeAsrButton.addEventListener("click", () => {
+      stopRealtimeAsr();
+      voiceStatus.textContent = "实时识别已停止。";
+    });
 
     startRecordButton.addEventListener("click", () => {
       if (!mediaStream) {
@@ -424,6 +492,81 @@ def live_transcribe_audio(
         audio_path=result.audio_path,
         latency_ms=result.latency_ms,
     )
+
+
+@router.websocket("/live/asr/ws")
+async def live_asr_websocket(websocket: WebSocket) -> None:
+    await websocket.accept()
+    settings = get_settings()
+    if not settings.dashscope_api_key:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "DASHSCOPE_API_KEY is not configured on the backend.",
+            }
+        )
+        await websocket.close()
+        return
+
+    upstream_url = f"{settings.qwen_asr_ws_url}?model={settings.qwen_asr_model}"
+    try:
+        import websockets
+    except ImportError:
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "websockets is not installed; install uvicorn[standard] runtime dependencies.",
+            }
+        )
+        await websocket.close()
+        return
+
+    try:
+        async with websockets.connect(
+            upstream_url,
+            additional_headers={"Authorization": f"Bearer {settings.dashscope_api_key}"},
+        ) as upstream:
+            await websocket.send_json({"type": "ready"})
+
+            async def client_to_upstream() -> None:
+                while True:
+                    message = await websocket.receive()
+                    if "bytes" in message:
+                        await upstream.send(message["bytes"])
+                    elif "text" in message:
+                        await upstream.send(message["text"])
+                    else:
+                        break
+
+            async def upstream_to_client() -> None:
+                async for message in upstream:
+                    if isinstance(message, bytes):
+                        await websocket.send_bytes(message)
+                    else:
+                        await websocket.send_text(_normalize_qwen_asr_message(message))
+
+            await asyncio.gather(client_to_upstream(), upstream_to_client())
+    except Exception as exc:
+        await websocket.send_json({"type": "error", "message": str(exc)})
+    finally:
+        await websocket.close()
+
+
+def _normalize_qwen_asr_message(message: str) -> str:
+    try:
+        payload = json.loads(message)
+    except json.JSONDecodeError:
+        return message
+
+    text = (
+        payload.get("text")
+        or payload.get("transcript")
+        or payload.get("output", {}).get("text")
+        or payload.get("output", {}).get("transcript")
+    )
+    if text:
+        return json.dumps({"type": "transcript", "text": text, "raw": payload}, ensure_ascii=False)
+    return json.dumps(payload, ensure_ascii=False)
 
 
 @router.get("/memories", response_model=list[MemoryEvent])

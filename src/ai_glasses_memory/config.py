@@ -20,6 +20,9 @@ class Settings:
     asr_model: str = "base"
     asr_device: str = "cpu"
     asr_compute_type: str = "int8"
+    qwen_asr_model: str = "qwen3-asr-flash-realtime"
+    qwen_asr_ws_url: str = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+    dashscope_api_key: str = ""
     search_provider: str = "chroma"
     vector_db_path: Path = Path("data/vector_memory.sqlite3")
     chroma_path: Path = Path("data/chroma")
@@ -65,6 +68,12 @@ def get_settings(env_file: Path | str | None = Path(".env")) -> Settings:
         asr_model=os.getenv("AI_GLASSES_ASR_MODEL", "base"),
         asr_device=os.getenv("AI_GLASSES_ASR_DEVICE", "cpu"),
         asr_compute_type=os.getenv("AI_GLASSES_ASR_COMPUTE_TYPE", "int8"),
+        qwen_asr_model=os.getenv("AI_GLASSES_QWEN_ASR_MODEL", "qwen3-asr-flash-realtime"),
+        qwen_asr_ws_url=os.getenv(
+            "AI_GLASSES_QWEN_ASR_WS_URL",
+            "wss://dashscope.aliyuncs.com/api-ws/v1/realtime",
+        ),
+        dashscope_api_key=os.getenv("AI_GLASSES_DASHSCOPE_API_KEY", os.getenv("DASHSCOPE_API_KEY", "")),
         search_provider=os.getenv("AI_GLASSES_SEARCH_PROVIDER", "chroma"),
         vector_db_path=Path(os.getenv("AI_GLASSES_VECTOR_DB_PATH", "data/vector_memory.sqlite3")),
         chroma_path=Path(os.getenv("AI_GLASSES_CHROMA_PATH", "data/chroma")),

@@ -98,6 +98,9 @@ def test_live_page_exposes_browser_native_camera_and_audio_controls():
     assert "captureFrame" in response.text
     assert 'fetch("/live/ask"' in response.text
     assert 'fetch("/live/transcribe"' in response.text
+    assert "/live/asr/ws" in response.text
+    assert "startRealtimeAsr" in response.text
+    assert "实时识别" in response.text
     assert "<video" in response.text
     assert "<canvas" in response.text
 
@@ -187,6 +190,19 @@ def test_live_transcribe_accepts_recorded_audio(tmp_path):
     assert Path(payload["audio_path"]).exists()
 
     app.dependency_overrides.clear()
+
+
+def test_live_asr_websocket_reports_missing_dashscope_key(monkeypatch):
+    for name in ["DASHSCOPE_API_KEY", "AI_GLASSES_DASHSCOPE_API_KEY"]:
+        monkeypatch.delenv(name, raising=False)
+
+    client = TestClient(app)
+
+    with client.websocket_connect("/live/asr/ws") as websocket:
+        payload = websocket.receive_json()
+
+    assert payload["type"] == "error"
+    assert "DASHSCOPE_API_KEY" in payload["message"]
 
 
 def test_api_can_delete_clear_prune_and_dedupe_memories(tmp_path):

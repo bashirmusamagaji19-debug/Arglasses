@@ -185,3 +185,32 @@ def test_default_settings_use_faster_whisper_asr(monkeypatch):
     assert settings.asr_model == "base"
     assert settings.asr_device == "cpu"
     assert settings.asr_compute_type == "int8"
+
+
+def test_settings_include_qwen_realtime_asr_options(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "AI_GLASSES_ASR_PROVIDER=qwen_realtime",
+                "AI_GLASSES_QWEN_ASR_MODEL=qwen3-asr-flash-realtime",
+                "AI_GLASSES_QWEN_ASR_WS_URL=wss://dashscope.aliyuncs.com/api-ws/v1/realtime",
+                "DASHSCOPE_API_KEY=test-key",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    for name in [
+        "AI_GLASSES_ASR_PROVIDER",
+        "AI_GLASSES_QWEN_ASR_MODEL",
+        "AI_GLASSES_QWEN_ASR_WS_URL",
+        "DASHSCOPE_API_KEY",
+    ]:
+        monkeypatch.delenv(name, raising=False)
+
+    settings = get_settings(env_file)
+
+    assert settings.asr_provider == "qwen_realtime"
+    assert settings.qwen_asr_model == "qwen3-asr-flash-realtime"
+    assert settings.qwen_asr_ws_url == "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+    assert settings.dashscope_api_key == "test-key"

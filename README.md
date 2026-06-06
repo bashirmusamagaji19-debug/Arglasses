@@ -136,6 +136,9 @@ AI_GLASSES_ASR_PROVIDER=faster_whisper
 AI_GLASSES_ASR_MODEL=base
 AI_GLASSES_ASR_DEVICE=cpu
 AI_GLASSES_ASR_COMPUTE_TYPE=int8
+AI_GLASSES_QWEN_ASR_MODEL=qwen3-asr-flash-realtime
+AI_GLASSES_QWEN_ASR_WS_URL=wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+DASHSCOPE_API_KEY=
 ```
 
 安装 / 更新本地依赖：
@@ -146,6 +149,15 @@ AI_GLASSES_ASR_COMPUTE_TYPE=int8
 ```
 
 Streamlit 的“语音提问”区域支持麦克风录音，也保留 `.wav`、`.mp3`、`.m4a`、`.ogg` 文件上传作为 fallback。系统会先转写成问题文本，再由用户提交到视觉记忆 pipeline。faster-whisper 模型采用首次转写时懒加载，因此打开页面不会立即加载模型；第一次转写可能需要下载和加载模型。当前版本是“录音后分段转写”，暂不做 WebSocket token 级实时流式，详细说明见 [docs/phase4-asr.md](docs/phase4-asr.md)。
+
+如果要使用阿里云 Qwen-ASR-Realtime，把 provider 改成：
+
+```powershell
+$env:AI_GLASSES_ASR_PROVIDER="qwen_realtime"
+$env:DASHSCOPE_API_KEY="你的 DashScope API Key"
+```
+
+然后使用 `/live` 页面里的“开始实时识别”。前端只连接本地 `/live/asr/ws`，API Key 只保存在后端环境变量中。
 
 ## 在线 Demo
 
@@ -170,6 +182,7 @@ Demo 使用模拟 OCR / 模拟 VLM，无需任何 API Key，上传图片即可�
 - `GET /live`
 - `POST /live/ask`
 - `POST /live/transcribe`
+- `WS /live/asr/ws`
 - `POST /ask`
 - `POST /transcribe`
 - `GET /memories`

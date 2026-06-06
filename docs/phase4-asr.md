@@ -12,7 +12,10 @@ AI 眼镜系统不应该只有文字输入。阶段 4 的目标是补上“听�
 -> 记忆写入和 RAG 检索
 ```
 
-当前版本先做 Streamlit 原生麦克风录音和音频上传 fallback，不做 WebSocket / WebRTC 级 token 流式。
+当前版本包含两种语音路径：
+
+- `/live/asr/ws`：后端代理到阿里云 Qwen-ASR-Realtime，面向实时识别。
+- `/live/transcribe` 和 Streamlit 语音控件：录音后用 faster-whisper 转写，作为本地 fallback。
 
 ## 当前实现
 
@@ -35,11 +38,11 @@ AI_GLASSES_ASR_COMPUTE_TYPE=int8
 
 Streamlit UI 的“语音提问”区域：
 
-1. 使用 `st.audio_input` 录制麦克风语音，或上传 `.wav`、`.mp3`、`.m4a`、`.ogg` 音频作为 fallback。
-2. 点击“转写语音”。
-3. 系统调用 `MemoryPipeline.transcribe_audio()`。
+1. `/live` 页面可以使用 Qwen-ASR-Realtime 做实时识别。
+2. Streamlit 页面可以使用 `st.audio_input` 录制麦克风语音，或上传 `.wav`、`.mp3`、`.m4a`、`.ogg` 音频作为 fallback。
+3. 录音后转写路径调用 `MemoryPipeline.transcribe_audio()`。
 4. 转写结果填入问题输入框。
-5. 用户再点击“提交问题”，进入原视觉记忆 pipeline。
+5. 用户再点击提交，进入原视觉记忆 pipeline。
 
 FastAPI 新增接口：
 
@@ -96,6 +99,26 @@ $env:AI_GLASSES_ASR_PROVIDER="mock"
 ```
 
 `FasterWhisperASRProvider` 采用懒加载：应用启动时只创建 provider，不立即加载模型；第一次点击“转写语音”时才导入 faster-whisper 并加载模型。
+
+## Qwen-ASR-Realtime
+
+启用阿里云 Qwen-ASR-Realtime：
+
+```powershell
+$env:AI_GLASSES_ASR_PROVIDER="qwen_realtime"
+$env:AI_GLASSES_QWEN_ASR_MODEL="qwen3-asr-flash-realtime"
+$env:AI_GLASSES_QWEN_ASR_WS_URL="wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+$env:DASHSCOPE_API_KEY="你的 DashScope API Key"
+.\.venv\Scripts\python.exe -m uvicorn ai_glasses_memory.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+前端只连接：
+
+```text
+WS /live/asr/ws
+```
+
+后端再用 `DASHSCOPE_API_KEY` 连接 DashScope，避免 API Key 暴露在浏览器中。
 
 ## 和视觉记忆 pipeline 的关系
 

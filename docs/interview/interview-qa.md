@@ -4,7 +4,7 @@
 
 普通视觉问答 demo 只处理当前图片，回答完就结束。这个项目的重点是“视觉记忆”：每次交互都会被结构化成 `MemoryEvent`，写入 SQLite，并同步到检索索引。用户后续可以问“刚才看到了什么”“鼠标是什么颜色的”“屏幕上出现过什么项目”，系统会从历史记忆中召回相关上下文再回答。
 
-当前输入体验也不是只依赖 Streamlit 上传控件，而是新增了 `/live` 浏览器原生输入页：实时摄像头预览、麦克风录音转写、提问时截取当前视频帧。
+当前输入体验也不是只依赖 Streamlit 上传控件，而是新增了 `/live` 浏览器原生输入页：实时摄像头预览、Qwen-ASR-Realtime 语音识别、提问时截取当前视频帧。
 
 ## 2. 一次完整 pipeline 是怎么跑的？
 
@@ -19,7 +19,7 @@ Live 实时预览截帧 / 图片上传
 -> UI 展示当前回答、OCR、摘要、时间线和历史问答
 ```
 
-语音提问会先经过 ASR provider 转写成文本，再进入同一条视觉问答 pipeline。当前 `/live` 页面支持浏览器录音，也保留音频文件上传 fallback。
+语音提问会先经过 ASR provider 转写成文本，再进入同一条视觉问答 pipeline。当前 `/live` 页面支持通过 `/live/asr/ws` 代理 Qwen-ASR-Realtime，也保留 faster-whisper 音频文件 fallback。
 
 这条 pipeline 的核心价值是模块边界清楚：ASR、OCR、VLM、Embedding、Search、RAG Answer 都可以替换，不需要重写 UI 或 API。
 
@@ -75,7 +75,7 @@ PaddleOCR 是重依赖，Windows CPU 环境下 PaddleOCR、PaddlePaddle、numpy�
 
 ## 10. 当前项目的主要限制是什么？
 
-- 当前 `/live` 是实时预览 + 提问时截帧，还没有做自动抽帧、帧去重和 WebSocket / WebRTC 级 token 流式转写。
+- 当前 `/live` 是实时预览 + 提问时截帧，ASR 已有 Qwen-Realtime 后端代理；还没有做自动抽帧、帧去重和长会话重连。
 - 当前 RAG answer provider 仍偏规则型，不是生产级 LLM 生成器。
 - 真实 VLM 依赖外部 OpenAI-compatible API 或自部署服务。
 - Chroma 默认可以跑通 RAG 架构，但中文语义效果取决于 embedding provider。
@@ -85,7 +85,7 @@ PaddleOCR 是重依赖，Windows CPU 环境下 PaddleOCR、PaddlePaddle、numpy�
 
 按原计划，后续优先级是：
 
-1. 把麦克风录音后转写升级为 WebSocket / WebRTC 级实时流式转写。
+1. 优化 Qwen-ASR-Realtime 的音频格式、增量文本合并和断线重连。
 2. 做隐私模式和延迟面板，体现 AI 眼镜工程意识。
 3. 接硬件端 HTTP 上传原型，让 RK3588 或手机端复用同一 pipeline。
 4. 把 RAG answer provider 升级为可选 LLM provider，提高历史问答自然度。
