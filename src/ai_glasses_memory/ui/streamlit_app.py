@@ -29,6 +29,8 @@ asr_provider_name = settings.asr_provider.strip().lower()
 st.info(f"当前 ASR 模式：{asr_provider_name}")
 if asr_provider_name == "faster_whisper":
     st.warning("faster-whisper 首次转写会加载模型；建议先用短音频验证延迟。")
+if asr_provider_name == "qwen_realtime":
+    st.warning("Qwen-ASR-Realtime 请使用 /live 页面里的实时识别；Streamlit 语音上传仅适用于 faster_whisper 或 mock。")
 
 search_provider_name = settings.search_provider.strip().lower()
 embedding_provider_name = settings.embedding_provider.strip().lower()
@@ -55,7 +57,8 @@ with left:
         key="voice-question",
     )
     selected_audio = microphone_audio or uploaded_audio
-    if st.button("转写语音", disabled=selected_audio is None):
+    asr_upload_disabled = selected_audio is None or asr_provider_name == "qwen_realtime"
+    if st.button("转写语音", disabled=asr_upload_disabled):
         audio_path = save_input_audio(selected_audio)
         transcription = pipeline.transcribe_audio(audio_path or "")
         st.session_state["transcribed_question"] = transcription.text

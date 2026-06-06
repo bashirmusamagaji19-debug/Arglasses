@@ -194,7 +194,7 @@ def test_live_transcribe_accepts_recorded_audio(tmp_path):
 
 def test_live_asr_websocket_reports_missing_dashscope_key(monkeypatch):
     for name in ["DASHSCOPE_API_KEY", "AI_GLASSES_DASHSCOPE_API_KEY"]:
-        monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv(name, "")
 
     client = TestClient(app)
 

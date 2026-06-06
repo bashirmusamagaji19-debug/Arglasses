@@ -173,6 +173,7 @@ def test_streamlit_ui_exposes_asr_audio_question_controls():
     assert "麦克风录音提问" in contents
     assert "上传语音问题" in contents
     assert "transcribe_audio" in contents
+    assert "Qwen-ASR-Realtime 请使用 /live 页面" in contents
 
 
 def test_streamlit_ui_exposes_rag_memory_answer_controls():

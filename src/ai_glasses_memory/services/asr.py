@@ -21,6 +21,13 @@ class MockASRProvider:
         return "我刚才看到了什么？"
 
 
+class QwenRealtimeASRProvider:
+    def transcribe(self, audio_path: str) -> str:
+        raise RuntimeError(
+            "Qwen-ASR-Realtime is a streaming provider. Use the /live/asr/ws WebSocket route."
+        )
+
+
 class FasterWhisperASRProvider:
     def __init__(
         self,
@@ -68,6 +75,8 @@ def create_asr_provider(
     normalized = provider.strip().lower()
     if normalized in {"", "mock"}:
         return MockASRProvider()
+    if normalized in {"qwen_realtime", "qwen-realtime", "qwen_asr_realtime"}:
+        return QwenRealtimeASRProvider()
     if normalized in {"faster_whisper", "faster-whisper"}:
         return FasterWhisperASRProvider(
             model_name,

@@ -3,6 +3,7 @@ import pytest
 from ai_glasses_memory.services.asr import (
     FasterWhisperASRProvider,
     MockASRProvider,
+    QwenRealtimeASRProvider,
     create_asr_provider,
 )
 
@@ -38,6 +39,19 @@ def test_faster_whisper_provider_loads_model_lazily(monkeypatch):
 
     assert provider.model is None
     assert "faster_whisper" not in imports
+
+
+def test_create_asr_provider_accepts_qwen_realtime_for_websocket_mode():
+    provider = create_asr_provider("qwen_realtime")
+
+    assert isinstance(provider, QwenRealtimeASRProvider)
+
+
+def test_qwen_realtime_provider_explains_websocket_route():
+    provider = QwenRealtimeASRProvider()
+
+    with pytest.raises(RuntimeError, match="/live/asr/ws"):
+        provider.transcribe("question.wav")
 
 
 def test_create_asr_provider_rejects_unknown_provider():

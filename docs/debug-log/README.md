@@ -27,3 +27,4 @@
 | 24 | 先用 Streamlit 麦克风录音，不直接上 WebSocket 流式 ASR | 使用 `st.audio_input` 做麦克风录音后转写，保留上传 fallback 和后续实时流升级路径 | [bug-24-streamlit-microphone-before-websocket-streaming.md](./bug-24-streamlit-microphone-before-websocket-streaming.md) |
 | 25 | Streamlit 输入控件不是最终实时交互形态 | 新增 `/live` 浏览器原生输入页，用实时预览、录音和截帧替代 Streamlit 输入控件作为主体验 | [bug-25-streamlit-input-not-final-live-experience.md](./bug-25-streamlit-input-not-final-live-experience.md) |
 | 26 | Qwen-ASR-Realtime 不能让前端直接连阿里云 | 新增 `/live/asr/ws` 后端代理，DashScope API Key 只保存在后端环境变量 | [bug-26-qwen-realtime-asr-key-proxy.md](./bug-26-qwen-realtime-asr-key-proxy.md) |
+| 27 | qwen_realtime provider 让 Streamlit 初始化崩溃 | 在 ASR provider factory 注册 streaming-only provider，并提示 Streamlit 语音上传改用 `/live` | [bug-27-qwen-realtime-provider-streamlit-init.md](./bug-27-qwen-realtime-provider-streamlit-init.md) |
